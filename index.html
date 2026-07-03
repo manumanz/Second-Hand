@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SECOND HAND — the inside of a stranger's pocket</title>
+<style>
+  :root{
+    --ink:#d8c9a8;
+    --dim:#8a7a5c;
+    --bg:#0a0805;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;
+    font-family:Georgia,'Times New Roman',serif;color:var(--ink);}
+  #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
+  canvas{display:block;cursor:none;}
+
+  .overlay{position:fixed;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;
+    background:rgba(8,6,3,.92);z-index:10;padding:24px;
+    transition:opacity .6s ease;}
+  .overlay.hidden{opacity:0;pointer-events:none;}
+
+  .kicker{font-size:11px;letter-spacing:.45em;text-transform:uppercase;color:var(--dim);margin-bottom:14px;}
+  h1{font-size:42px;font-weight:normal;letter-spacing:.18em;margin-bottom:6px;}
+  .sub{font-style:italic;color:var(--dim);margin-bottom:34px;font-size:16px;}
+  .cardhead{font-size:12px;letter-spacing:.4em;text-transform:uppercase;color:var(--dim);margin-bottom:22px;}
+  .cardlines{max-width:520px;font-size:19px;line-height:1.9;font-style:italic;}
+  .cardlines p{opacity:0;transform:translateY(6px);transition:opacity 1.1s ease,transform 1.1s ease;}
+  .cardlines p.on{opacity:1;transform:none;}
+  .continue{margin-top:44px;font-size:11px;letter-spacing:.35em;text-transform:uppercase;
+    color:var(--dim);opacity:0;transition:opacity .8s;cursor:pointer;}
+  .continue.on{opacity:.9;}
+  .continue:hover{color:var(--ink);}
+
+  button.plain{background:none;border:1px solid #4a3d28;color:var(--ink);
+    font-family:inherit;font-size:13px;letter-spacing:.3em;text-transform:uppercase;
+    padding:14px 34px;cursor:pointer;transition:all .3s;}
+  button.plain:hover{border-color:var(--ink);background:rgba(216,201,168,.06);}
+  .seedline{margin-top:26px;font-size:12px;color:var(--dim);letter-spacing:.12em;}
+  .seedline input{background:none;border:none;border-bottom:1px solid #3a3020;color:var(--ink);
+    font-family:inherit;font-size:12px;width:110px;text-align:center;letter-spacing:.15em;outline:none;}
+  .hint{position:absolute;bottom:26px;font-size:11px;color:#5a4d38;letter-spacing:.15em;font-style:italic;max-width:460px;line-height:1.7;}
+
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:5;}
+  #hud.hidden{display:none;}
+  #daylabel{position:absolute;top:18px;left:22px;font-size:10px;letter-spacing:.4em;
+    text-transform:uppercase;color:rgba(216,201,168,.32);}
+  #actlabel{position:absolute;top:38px;left:22px;font-size:12px;font-style:italic;
+    color:rgba(216,201,168,.4);letter-spacing:.08em;transition:opacity .8s;}
+  #toasts{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);
+    display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;width:90%;}
+  .toast{font-size:14px;font-style:italic;color:var(--ink);text-align:center;
+    background:rgba(8,6,3,.72);padding:8px 20px;border-radius:2px;
+    opacity:0;transition:opacity .6s;max-width:480px;line-height:1.5;}
+  .toast.on{opacity:.95;}
+  .toast.hint{color:#c9b463;}
+  #ffbtn,#mutebtn{position:absolute;bottom:16px;pointer-events:auto;background:none;border:none;
+    color:rgba(216,201,168,.35);font-family:inherit;font-size:11px;letter-spacing:.25em;
+    text-transform:uppercase;cursor:pointer;padding:8px 12px;}
+  #ffbtn{right:16px;} #mutebtn{left:16px;}
+  #ffbtn:hover,#mutebtn:hover{color:var(--ink);}
+  #ffbtn.on{color:var(--ink);}
+  #seedtag{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
+    font-size:10px;letter-spacing:.3em;color:rgba(216,201,168,.18);}
+
+  .fatelist{max-width:540px;font-size:15px;line-height:2.05;font-style:italic;color:var(--ink);
+    max-height:46vh;overflow-y:auto;padding:0 10px;}
+  .fatelist::-webkit-scrollbar{width:3px;} .fatelist::-webkit-scrollbar-thumb{background:#4a3d28;}
+  .fate-lost{color:#8a6a5c;} .fate-taken{color:var(--dim);} .fate-kept{color:#c9b98a;}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="cv"></canvas></div>
+
+<div id="hud" class="hidden">
+  <div id="daylabel"></div>
+  <div id="actlabel"></div>
+  <div id="toasts"></div>
+  <button id="mutebtn">sound on</button>
+  <button id="ffbtn" title="hold to hurry the day along">&#187; hurry</button>
+  <div id="seedtag"></div>
+</div>
+
+<div id="title" class="overlay">
+  <div class="kicker">a pocket simulation</div>
+  <h1>SECOND HAND</h1>
+  <div class="sub">you are the inside of a stranger's coat pocket</div>
+  <button class="plain" id="beginbtn">meet them</button>
+  <div style="margin-top:14px"><button class="plain" id="howtobtn" style="font-size:11px;padding:10px 24px;border-color:#33291a;color:var(--dim)">how to play</button></div>
+  <div class="seedline">stranger no. <span id="seedid"></span> &nbsp;&middot;&nbsp; or summon one: <input id="seedin" maxlength="12" spellcheck="false"></div>
+  <div class="hint">seven days. you never see them &mdash; only what falls in, and how they move.</div>
+</div>
+
+<div id="howto" class="overlay hidden">
+  <div class="kicker">how to play</div>
+  <div class="cardlines" style="font-style:normal;font-size:16px;text-align:left;max-width:560px;">
+    <p class="on">you are the inside of a stranger's coat pocket, for seven days. you never see them &mdash; the swaying is them walking; the crush is them sitting; the stillness is night.</p>
+    <p class="on"><b>watch what falls in.</b> every object is a clue about who they are &mdash; and one of them will turn out to matter more than the rest.</p>
+    <p class="on"><b>drag to nudge things.</b> you are weak while they move and strong while they rest. wait for sitting, or night.</p>
+    <p class="on"><b>the hole</b> (lower right seam) eats anything small that rests on it &mdash; and it grows every day. pull things to safety, or deliberately feed it something they'd be better off losing. <b>rub across the hole</b> to pull its threads tighter for a while.</p>
+    <p class="on"><b>the fingers</b> dive in at story moments, hunting a specific object. leave it findable and the story goes one way. hide it in a corner &mdash; or down the hole &mdash; and the story goes another. both are allowed.</p>
+    <p class="on">at week's end the coat is donated. everything you kept becomes someone else's beginning.</p>
+  </div>
+  <div style="margin-top:30px"><button class="plain" id="howtoclose">understood</button></div>
+</div>
+
+<div id="card" class="overlay hidden">
+  <div class="cardhead" id="cardhead"></div>
+  <div class="cardlines" id="cardlines"></div>
+  <div class="continue" id="cardgo">continue</div>
+</div>
+
+<div id="end" class="overlay hidden">
+  <div class="kicker">the coat moves on</div>
+  <div class="cardhead" id="endhead"></div>
+  <div class="fatelist" id="fatelist"></div>
+  <div style="margin-top:34px"><button class="plain" id="againbtn">meet another stranger</button></div>
+  <div class="seedline">this was stranger no. <span id="endseed"></span></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
+<script src="js/rng.js"></script>
+<script src="js/story.js"></script>
+<script src="js/objects.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/render.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
