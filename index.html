@@ -65,6 +65,15 @@
   .sus.out .susblurb{text-decoration:line-through;}
   .susname{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:#c9b463;margin-bottom:6px;}
   .susblurb{font-size:15px;font-style:italic;color:var(--ink);line-height:1.55;margin-bottom:8px;}
+  .susline{font-size:14.5px;color:var(--ink);line-height:1.7;}
+  .susline span{display:inline-block;min-width:96px;font-size:10px;letter-spacing:.25em;
+    text-transform:uppercase;color:var(--dim);font-style:normal;}
+  .sus .suslines{margin-bottom:9px;}
+
+  #tasks{position:absolute;top:64px;right:16px;width:230px;text-align:right;pointer-events:none;}
+  #tasks .task{font-size:12.5px;font-style:italic;color:rgba(234,223,196,.45);line-height:1.9;}
+  #tasks .task.done{color:#c9b463;text-decoration:line-through;text-decoration-color:rgba(201,180,99,.5);}
+  #threadct{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:rgba(201,180,99,.6);margin-bottom:4px;}
   .susbtns{display:flex;gap:18px;}
   .susbtn{font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--dim);cursor:pointer;}
   .susbtn:hover{color:var(--ink);}
@@ -137,6 +146,7 @@
   <button id="mutebtn">sound on</button>
   <button id="ffbtn" title="hold to hurry the day along">&#187; hurry</button>
   <button id="jrnbtn">pocket book</button>
+  <div id="tasks"><div id="threadct"></div><div id="tasklist"></div></div>
   <div id="exam">
     <div class="xname"></div>
     <div class="xdesc"></div>

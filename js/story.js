@@ -551,6 +551,7 @@
     const NAMES = ['person one', 'person two', 'person three', 'person four'];
     g.suspects = SH.shuffle(r, raw).map((s, i) => ({
       id: i, name: NAMES[i], work: s.work, matter: s.matter, walk: s.walk, correct: s.correct,
+      occP: WORKP[s.work], matP: MATTERP[s.matter], walkP: WALKP[s.walk],
       blurb: 'someone who ' + WORKP[s.work] + ', who ' + MATTERP[s.matter] + ', and who ' + WALKP[s.walk] + '.',
     }));
     g.suspectPick = null;
@@ -587,20 +588,13 @@
     };
   };
 
-  /* epilogue card sequence after day 7 */
+  /* epilogue card sequence after day 7 — three different shapes, chosen by seed,
+     so no two goodbyes read the same way */
   SH.buildEpilogue = function (g) {
     const cards = [];
-    cards.push({
-      head: 'SUNDAY, LATER',
-      lines: ['the coat goes into a paper bag, then a van,',
-              'then onto a rail between a hundred sleeping coats.',
-              'pockets dream, in case you wondered. we dream of weight.'],
-    });
-    cards.push({
-      head: 'SOMEONE NEW',
-      lines: ['the coat is chosen by ' + g.newOwner + '.',
-              'the first thing everyone does with a second-hand coat', 'is reach into the pockets.'],
-    });
+    const shape = g.seed % 3;
+
+    // shared pieces
     const kept = g.items.filter(it => it.fate === 'in-pocket' && it.type !== g.arc.keyType);
     const found = [];
     const seen = {};
@@ -610,19 +604,52 @@
       const l = FOUND[it.type];
       if (l && it.type !== 'ring' && it.type !== 'tag' && it.type !== 'letter') found.push(l[0]);
     }
-    if (found.length) {
-      cards.push({ head: 'WHAT THE POCKET GAVE THEM', lines: found.slice(0, 6) });
-    } else {
-      cards.push({ head: 'WHAT THE POCKET GAVE THEM',
-        lines: ['nothing but lint and warmth.', 'which, on the right morning, is plenty.'] });
-    }
+    const foundCard = head => found.length
+      ? { head, lines: found.slice(0, 6) }
+      : { head, lines: ['nothing but lint and warmth.', 'which, on the right morning, is plenty.'] };
     const lost = g.items.filter(it => it.fate === 'lost');
-    if (lost.length)
-      cards.push({ head: 'AND THE HOLE',
-        lines: ['the hole kept ' + lost.length + ' small thing' + (lost.length > 1 ? 's' : '') + ' for itself.',
-                'a drain on ' + g.street + ' street is secretly rich now.',
-                'some pockets are doors. i never said i wasn’t.'] });
-    cards.push({ head: 'AS FOR THEM', lines: g.arc.outcome(g) });
+    const holeCard = lost.length
+      ? { head: 'AND THE HOLE',
+          lines: ['the hole kept ' + lost.length + ' small thing' + (lost.length > 1 ? 's' : '') + ' for itself.',
+                  'a drain on ' + g.street + ' street is secretly rich now.',
+                  'some pockets are doors. i never said i wasn’t.'] }
+      : null;
+
+    if (shape === 0) {
+      // the classic: the coat leaves, someone new arrives
+      cards.push({ head: 'SUNDAY, LATER',
+        lines: ['the coat goes into a paper bag, then a van,',
+                'then onto a rail between a hundred sleeping coats.',
+                'pockets dream, in case you wondered. we dream of weight.'] });
+      cards.push({ head: 'SOMEONE NEW',
+        lines: ['the coat is chosen by ' + g.newOwner + '.',
+                'the first thing everyone does with a second-hand coat', 'is reach into the pockets.'] });
+      cards.push(foundCard('WHAT THE POCKET GAVE THEM'));
+      if (holeCard) cards.push(holeCard);
+      cards.push({ head: 'AS FOR THEM', lines: g.arc.outcome(g) });
+    } else if (shape === 1) {
+      // verdict first: how it ended, then what was left behind
+      cards.push({ head: 'HOW IT ENDED', lines: g.arc.outcome(g) });
+      cards.push({ head: 'THE COAT MOVES ON',
+        lines: ['a paper bag. a van. a rail of sleeping coats.',
+                'a week is a long time to hold somebody’s life.', 'i was glad to do it.'] });
+      if (holeCard) cards.push(holeCard);
+      cards.push(foundCard('LEFT BEHIND, PASSED ALONG'));
+      cards.push({ head: 'THE LAST POCKET FACT',
+        lines: ['the coat is chosen by ' + g.newOwner + '.',
+                'they will never know any of this.', 'unless the pocket tells them. pockets talk. look at me now.'] });
+    } else {
+      // told from the new owner's first morning
+      cards.push({ head: 'A DIFFERENT MONDAY',
+        lines: ['someone new wakes up late: ' + g.newOwner + '.',
+                'yesterday they bought a coat that had a whole week inside it.',
+                'the first thing anyone does with a second-hand coat is reach into the pockets.'] });
+      cards.push(foundCard('WHAT THEIR HAND FINDS'));
+      if (holeCard) cards.push(holeCard);
+      cards.push({ head: 'WORD TRAVELS', lines: g.arc.outcome(g) });
+      cards.push({ head: 'AND THE POCKET',
+        lines: ['new lint. new weather. new weight.', 'i begin again. i always begin again.'] });
+    }
     return cards;
   };
 

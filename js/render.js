@@ -305,9 +305,9 @@
     ctx.fillStyle = mat.fill;
     ctx.fill();
 
-    // faint constant outline so shapes read even in the dark
-    ctx.strokeStyle = 'rgba(216,201,168,' + (0.05 + e0 * 0.08).toFixed(3) + ')';
-    ctx.lineWidth = 1;
+    // constant outline so shapes read even in the dark
+    ctx.strokeStyle = 'rgba(216,201,168,' + (0.14 + e0 * 0.12).toFixed(3) + ')';
+    ctx.lineWidth = 1.1;
     ctx.stroke();
 
     // rim light toward the shaft

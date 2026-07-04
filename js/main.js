@@ -212,12 +212,16 @@
         if (tut.need('mend')) toast('you pulled the threads tighter. it will not hold forever.', true, 5500);
         if (g && g.impact && narrate.mendDay !== dayIdx) {
           narrate.mendDay = dayIdx;
-          g.impact.push('day ' + (dayIdx + 1) + ': you stitched the hole tighter.');
+          g.impact.push('day ' + (dayIdx + 1) + ': you stitched the hole tighter. nothing was lost on your watch.');
         }
+        completeTask('mend');
         break;
       case 'gone':
         toast(ev.label + ' — gone. through the hole, into the world.');
-        if (g && g.impact) g.impact.push('day ' + (dayIdx + 1) + ': the hole took ' + ev.label + '.');
+        if (g && g.impact) {
+          const key = ev.label === SH.ITEM_DEFS[g.arc.keyType].label;
+          g.impact.push('day ' + (dayIdx + 1) + ': the hole took ' + ev.label + '.' + (key ? ' the story bent hard.' : ''));
+        }
         break;
       case 'handStart':
         if (tut.need('hand'))
@@ -238,20 +242,63 @@
         const m = ev.ev.minor;
         if (ev.result === 'took') {
           toast(m ? 'bus money found. the day moves on.' : 'they found ' + ev.label + '. it goes up into the light.');
-          if (!m && g.impact) g.impact.push('day ' + (dayIdx + 1) + ': the fingers found ' + ev.label + '.');
+          if (m) completeTask('fare');
+          else if (g.impact) g.impact.push('day ' + (dayIdx + 1) + ': they found ' + ev.label + ' — and the story went the way they hoped.');
         } else if (ev.result === 'miss') {
           // was it hidden? tell the player their trick worked.
           const buried = g.items.some(it => it.type === ev.ev.seek && it.fate === 'in-pocket' && SH.Sim.isHidden(it));
           if (m) toast('no coin to be found. a small sigh from above.');
           else if (buried) toast('the fingers searched and searched. ' + ev.label + ' stayed buried in the dark corner. your doing.');
           else toast('they came up empty. that changes things.');
-          if (!m && g.impact) g.impact.push('day ' + (dayIdx + 1) + ': the fingers hunted ' + ev.label + ' and left with nothing.' + (buried ? ' you hid it.' : ''));
+          if (!m && g.impact) g.impact.push('day ' + (dayIdx + 1) + ': ' +
+            (buried ? 'you hid ' + ev.label + ' from the fingers. the story bent.'
+                    : 'the fingers came up empty. the story bent.'));
         }
         else if (ev.result === 'returned') toast(ev.label + ' — used, and put back.');
         else if (ev.result === 'peeked') toast(ev.label + ' — held, considered, put back.');
+        if (!m && (ev.result === 'took' || ev.result === 'miss')) completeTask('choice');
         break;
       }
     }
+  }
+
+  /* ---------------- today's tasks: loose threads to earn ----------------
+     every finished task = one thread. threads make the pocket talk
+     at the final lineup. this is how watching, examining, hiding and
+     mending all feed the same goal: knowing who they are. */
+  function genTasks(resolved) {
+    const pool = [];
+    if (resolved.hands.some(h => !h.minor && (h.action === 'take')))
+      pool.push({ id: 'choice', text: 'the fingers come hunting today. make your call — help them, or hide it' });
+    if (resolved.hands.some(h => h.minor))
+      pool.push({ id: 'fare', text: 'make sure the fingers find a coin today' });
+    if (dayIdx >= 1) pool.push({ id: 'night', text: 'get a secret out of something at night' });
+    pool.push({ id: 'watch', text: 'examine something while they sit or sleep' });
+    pool.push({ id: 'mend', text: 'stitch the hole once' });
+    pool.push({ id: 'protect', text: 'let nothing fall through the hole today' });
+    const picked = SH.shuffle(g.rng, pool).slice(0, 2);
+    g.tasks = [{ id: 'examine-new', text: 'examine something new', done: false }]
+      .concat(picked.map(t => ({ id: t.id, text: t.text, done: false })));
+    renderTasks();
+  }
+
+  function completeTask(id) {
+    if (!g || !g.tasks) return;
+    const t = g.tasks.find(x => x.id === id && !x.done);
+    if (!t) return;
+    t.done = true;
+    g.threads = (g.threads || 0) + 1;
+    toast('✓ ' + t.text + ' — a loose thread earned.');
+    Audio2.blip(880, 0.3, 0.025, 'triangle');
+    renderTasks();
+  }
+
+  function renderTasks() {
+    if (!g || !g.tasks) { $('tasklist').innerHTML = ''; $('threadct').textContent = ''; return; }
+    $('threadct').textContent = 'threads: ' + (g.threads || 0);
+    $('tasklist').innerHTML = g.tasks
+      .map(t => '<div class="task' + (t.done ? ' done' : '') + '">' + (t.done ? '✓ ' : '· ') + t.text + '</div>')
+      .join('');
   }
 
   /* ---------------- examining + the pocket book ---------------- */
@@ -285,10 +332,13 @@
     if (freshNight) {
       toast('a confession, by moonlight. the pocket book keeps it.');
       Audio2.blip(392, 0.6, 0.03, 'sine');
+      completeTask('night');
     } else if (fresh) {
       toast('logged in the pocket book: ' + it.label + '.');
       Audio2.blip(660, 0.25, 0.03, 'triangle');
     }
+    if (fresh) completeTask('examine-new');
+    if (SH.Sim.actName === 'sit' || SH.Sim.actName === 'night') completeTask('watch');
     updateJrnBtn();
   }
 
@@ -319,7 +369,11 @@
       const struck = g.suspectStruck[s.id], picked = g.suspectPick === s.id;
       html += '<div class="sus' + (struck ? ' out' : '') + (picked ? ' pick' : '') + '" data-sid="' + s.id + '">' +
         '<div class="susname">' + s.name + (picked ? ' — your pick' : '') + '</div>' +
-        '<div class="susblurb">' + s.blurb + '</div>' +
+        '<div class="suslines">' +
+        '<div class="susline"><span>occupation</span>' + s.occP + '</div>' +
+        '<div class="susline"><span>secret</span>' + s.matP + '</div>' +
+        '<div class="susline"><span>the walk</span>' + s.walkP + '</div>' +
+        '</div>' +
         '<div class="susbtns">' +
         '<span class="susbtn" data-act="pick" data-sid="' + s.id + '">' + (picked ? 'unpick' : 'this is them') + '</span>' +
         '<span class="susbtn" data-act="strike" data-sid="' + s.id + '">' + (struck ? 'un-rule out' : 'rule out') + '</span>' +
@@ -595,8 +649,12 @@
     g.journal = {};
     g.journalNight = {};
     g.impact = [];
+    g.threads = 0;
+    g.tasks = null;
+    g.lastDayAllDone = false;
     g.inherit = inherit || null;
     narrate.mendDay = -1; narrate.hideHinted = false;
+    renderTasks();
     SH.Sim.init(g);
     SH.Render.makeTextures(g);
     $('seedtag').textContent = 'stranger no. ' + g.seedId;
@@ -620,10 +678,13 @@
         resolved.drops.push({ f: SH.rf(g.rng, .05, .5), type: t });
       resolved.drops.sort((a, b) => a.f - b.f);
     }
+    if (g.lastDayAllDone)
+      resolved.lines.push('(you kept busy yesterday. the pocket remembers: ' + g.threads + ' threads now.)');
     showCard(resolved.header, resolved.lines, () => {
       const segs = buildSchedule(g, resolved.mods);
       const dur = segs.reduce((s, x) => s + x.dur, 0);
       SH.Sim.startDay(resolved, dayIdx, segs, dur);
+      genTasks(resolved);
       $('daylabel').textContent = resolved.header.toLowerCase();
       $('hud').classList.remove('hidden');
       state = 'day';
@@ -634,6 +695,8 @@
 
   function endOfDay() {
     if (dayIdx === 0) tut.finish();
+    if (SH.Sim.dayLost === 0) completeTask('protect');
+    g.lastDayAllDone = !!(g.tasks && g.tasks.every(t => t.done));
     dayIdx++;
     if (dayIdx < 7) { startDayCard(); return; }
     // seven days done → first, the reading of the stranger
@@ -646,14 +709,31 @@
   function showGuess() {
     const box = $('gsuspects');
     box.innerHTML = '';
+    // the threads pay off: enough of them and the pocket whispers
+    const whispers = [];
+    const wrong = g.suspects.filter(s => !s.correct && !g.suspectStruck[s.id]);
+    let nW = 0;
+    if ((g.threads || 0) >= 10) nW = 2; else if ((g.threads || 0) >= 6) nW = 1;
+    for (let i = 0; i < nW && wrong.length; i++) {
+      const s = wrong.splice(Math.floor(Math.random() * wrong.length), 1)[0];
+      g.suspectStruck[s.id] = true;
+      whispers.push(s.name);
+    }
+    if (whispers.length) {
+      const w = document.createElement('div');
+      w.style.cssText = 'font-style:italic;color:#c9b463;font-size:15px;margin-bottom:14px;line-height:1.6;';
+      w.textContent = 'you earned ' + g.threads + ' threads this week. the pocket owes you. it whispers: it is not ' +
+        whispers.join('. and it is not ') + '.';
+      box.appendChild(w);
+    }
     g.finalPick = (g.suspectPick !== null && !g.suspectStruck[g.suspectPick]) ? g.suspectPick : null;
     for (const s of g.suspects) {
       const b = document.createElement('button');
       b.className = 'gopt' + (g.finalPick === s.id ? ' sel' : '') + (g.suspectStruck[s.id] ? ' struck' : '');
-      b.innerHTML = '<b>' + s.name + '</b> — ' + s.blurb;
+      b.innerHTML = '<b>' + s.name + '</b><br>occupation: ' + s.occP + '<br>secret: ' + s.matP + '<br>the walk: ' + s.walkP;
       b.addEventListener('click', () => {
         g.finalPick = s.id;
-        for (const c of box.children) c.classList.remove('sel');
+        for (const c of box.children) if (c.classList) c.classList.remove('sel');
         b.classList.add('sel');
         $('guessgo').disabled = false;
       });

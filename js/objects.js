@@ -44,12 +44,12 @@
 
   /* material tints: near-silhouette fills + rim colours */
   const MATS = {
-    metal:  { fill: '#171412', rim: null, glint: true },
-    gold:   { fill: '#2a2010', rim: '#ffd27a', glint: true, minRim: 0.3 },
-    paper:  { fill: '#241d13', rim: null, glint: false },
-    plastic:{ fill: '#1b1512', rim: null, glint: false },
-    cloth:  { fill: '#1d1712', rim: null, glint: false },
-    organic:{ fill: '#20180f', rim: null, glint: false },
+    metal:  { fill: '#2a2620', rim: null, glint: true },
+    gold:   { fill: '#3a2c14', rim: '#ffd27a', glint: true, minRim: 0.35 },
+    paper:  { fill: '#38301f', rim: null, glint: false },
+    plastic:{ fill: '#2c231c', rim: null, glint: false },
+    cloth:  { fill: '#2e251b', rim: null, glint: false },
+    organic:{ fill: '#332818', rim: null, glint: false },
   };
   SH.MATS = MATS;
 
