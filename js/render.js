@@ -466,6 +466,30 @@
     }
   }
 
+  /* ---------------- the lint-moth ---------------- */
+  function drawMoth() {
+    const m = SH.Sim.moth;
+    if (!m) return;
+    const e = R.exposure(m.x, m.y);
+    const a = 0.35 + e * 0.55;
+    const flap = Math.sin(m.t * 26) * 0.9;
+    ctx.save();
+    ctx.translate(m.x, m.y);
+    ctx.rotate(Math.atan2(m.vy, m.vx) + Math.PI / 2);
+    ctx.fillStyle = 'rgba(235,225,200,' + a.toFixed(3) + ')';
+    // two flickering wings
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(-7 * (0.4 + Math.abs(flap)), -5); ctx.lineTo(-1, -8); ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(7 * (0.4 + Math.abs(flap)), -5); ctx.lineTo(1, -8); ctx.closePath();
+    ctx.fill();
+    // dusty body
+    ctx.fillStyle = 'rgba(210,195,165,' + (a * 0.9).toFixed(3) + ')';
+    ctx.beginPath(); ctx.ellipse(0, -3, 1.6, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
   /* ---------------- cursor ---------------- */
   function drawCursor() {
     const sim = SH.Sim;
@@ -544,6 +568,7 @@
     if (sim.g) for (const it of sim.g.items) drawItem(it);
     drawHideCorner(); // shadow falls OVER whatever is buried there
     drawHand();
+    drawMoth();
     drawShaft(0.35, false);
     drawLint(dt);
     drawCursor();

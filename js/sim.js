@@ -23,8 +23,7 @@
   SH.pocketBottom = function (t) { return qbez(bL, bC, bR, t); };
   SH.pocketMouth = { l: mouthL, r: mouthR };
 
-  const HOLE_T = 0.84;                       // where on the right seam the hole lives
-  const HOLE_R_BY_DAY = [5, 9, 11, 13, 15, 18, 21];
+  const HOLE_R_BY_DAY = [6, 10, 13, 15, 18, 21, 24];
 
   const sim = SH.Sim = {
     engine: null, world: null,
@@ -91,7 +90,8 @@
     addChain([{ x: 120, y: -140 }, { x: mouthL.x - 4, y: mouthL.y - 6 }]);
     addChain([{ x: 780, y: -140 }, { x: mouthR.x + 4, y: mouthR.y - 6 }]);
 
-    const hp = SH.pocketPoint('R', HOLE_T);
+    // the hole lives in the bottom seam now — right under where everything piles
+    const hp = SH.pocketBottom(0.7);
     sim.holeC = { x: hp.x, y: hp.y };
     sim.holeR = HOLE_R_BY_DAY[0];
 
@@ -110,6 +110,7 @@
     const x = SH.rf(g.rng, 380, 520), y = -40;
     const it = SH.makeItem(sim.world, type, x, y, g.rng, opts);
     if (it) {
+      it.dropT = sim.t;
       g.items.push(it);
       sim.events.push({ type: 'spawn', label: it.label });
     }
@@ -125,8 +126,51 @@
     sim.hands = dayResolved.hands; sim.hi = 0;
     sim.dayLost = 0;
     sim.holeR = HOLE_R_BY_DAY[dayIdx];
+    // one lint-moth per day, arriving at a random hour
+    sim.moth = null;
+    sim.mothDone = false;
+    sim.mothAt = SH.rf(sim.g.rng, 0.15, 0.55) * durSec;
+    sim.stillT = 0;
     sim.setSeg(0);
   };
+
+  /* ---------------- the lint-moth: fast, shy, worth a thread ---------------- */
+  function updateMoth(dt) {
+    if (!sim.moth) {
+      if (!sim.mothDone && sim.t > sim.mothAt) {
+        sim.moth = { x: 450, y: 130, vx: 0, vy: 40, t: 0, ph: SH.rf(sim.g.rng, 0, 100) };
+        sim.events.push({ type: 'mothIn' });
+      }
+      return;
+    }
+    const m = sim.moth;
+    m.t += dt;
+    // wandering flight
+    m.vx += (SH.noise2(m.ph, m.t * 0.9) - 0.5) * 900 * dt;
+    m.vy += (SH.noise2(m.ph + 40, m.t * 0.9) - 0.5) * 900 * dt;
+    // it fears the cursor
+    if (sim.pointer.worldOK) {
+      const dx = m.x - sim.pointer.x, dy = m.y - sim.pointer.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 130 && d > 0.1) {
+        const f = (1 - d / 130) * 1400 * dt;
+        m.vx += (dx / d) * f;
+        m.vy += (dy / d) * f;
+      }
+    }
+    // stay inside the pocket, roughly
+    if (m.x < 240) m.vx += 700 * dt; if (m.x > 660) m.vx -= 700 * dt;
+    if (m.y < 150) m.vy += 700 * dt; if (m.y > 960) m.vy -= 700 * dt;
+    m.vx *= 0.96; m.vy *= 0.96;
+    const sp = Math.hypot(m.vx, m.vy);
+    if (sp > 300) { m.vx *= 300 / sp; m.vy *= 300 / sp; }
+    m.x += m.vx * dt; m.y += m.vy * dt;
+    if (m.t > 24) { // it gets bored and leaves through the mouth
+      sim.moth = null;
+      sim.mothDone = true;
+      sim.events.push({ type: 'mothGone' });
+    }
+  }
 
   sim.setSeg = function (i) {
     sim.segIdx = i; sim.segT = 0;
@@ -318,13 +362,24 @@
         continue;
       }
       const holeR = sim.effHoleR();
-      if (it.passSize > holeR) continue;
+      if (it.passSize > holeR) {
+        // too big to fit — lying on the hole, it works as a plug
+        if (!sim.plugToastDone) {
+          const dd = Math.hypot(it.body.position.x - sim.holeC.x, it.body.position.y - sim.holeC.y);
+          const spd = Math.hypot(it.body.velocity.x, it.body.velocity.y);
+          if (dd < holeR + 10 && spd < 0.5) {
+            sim.plugToastDone = true;
+            sim.events.push({ type: 'plugged', label: it.label });
+          }
+        }
+        continue;
+      }
       // grabbed items don't slip
       if (sim.hand && sim.hand.grabbed === it) continue;
       const d = Math.hypot(it.body.position.x - sim.holeC.x, it.body.position.y - sim.holeC.y);
-      // the hole breathes in: small things nearby feel a gentle, insistent pull
-      if (d < holeR + 75 && d > 1) {
-        const pull = 60 * (1 - d / (holeR + 75)) * (1 - 0.7 * sim.mend);
+      // the hole breathes in: small things nearby feel an insistent pull
+      if (d < holeR + 110 && d > 1) {
+        const pull = 95 * (1 - d / (holeR + 110)) * (1 - 0.7 * sim.mend);
         const dx = (sim.holeC.x - it.body.position.x) / d, dy = (sim.holeC.y - it.body.position.y) / d;
         Body.setVelocity(it.body, {
           x: it.body.velocity.x + dx * pull * dt,
@@ -372,8 +427,21 @@
   };
 
   sim.gripAt = function (wx, wy) {
+    // the moth first — a catch beats a grab
+    if (sim.moth && Math.hypot(sim.moth.x - wx, sim.moth.y - wy) < 36) {
+      sim.moth = null;
+      sim.mothDone = true;
+      sim.events.push({ type: 'mothCaught' });
+      return;
+    }
     // press near a thing = the pocket's ghost takes hold of it
     sim.dragIt = sim.itemAt(wx, wy);
+    const it = sim.dragIt;
+    // a mid-air catch: gripped young, high, and still falling
+    if (it && it.body && it.dropT !== undefined &&
+        (sim.t - it.dropT) < 2.4 && it.body.position.y < 620 && it.body.velocity.y > 0.8) {
+      sim.events.push({ type: 'caught', label: it.label });
+    }
   };
   sim.releaseGrip = function () { sim.dragIt = null; };
 
@@ -421,6 +489,16 @@
     Body.setVelocity(b, { x: vx, y: vy });
     sim.nudgeCount = (sim.nudgeCount || 0) + 1;
     sim.ripple = Math.max(sim.ripple, 0.25);
+    // steady hands: holding a thing dead still while the owner is in motion
+    if (sim.act && sim.act.intensity >= 0.45 && Math.hypot(b.velocity.x, b.velocity.y) < 1.4) {
+      sim.stillT += dt;
+      if (sim.stillT > 5 && sim.stillT < 900) {
+        sim.stillT = 999; // once per day
+        sim.events.push({ type: 'heldstill' });
+      }
+    } else if (sim.stillT < 900) {
+      sim.stillT = 0;
+    }
   }
 
   /* ---------------- main update ---------------- */
@@ -493,6 +571,7 @@
     updateGrip(dt);
     updateHand(dt);
     updateHole(dt);
+    updateMoth(dt);
 
     Engine.update(sim.engine, Math.min(dt, 0.033) * 1000);
 

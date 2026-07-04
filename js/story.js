@@ -473,28 +473,28 @@
 
   /* ---- simple, anonymous phrasings for suspects + the final answer ---- */
   const WORKP = {
-    office:    'sits at a desk all week',
-    barista:   'makes coffee for strangers all day',
-    courier:   'races deliveries across the city',
-    student:   'is a student drowning in deadlines',
-    bartender: 'pours drinks until the birds sing',
-    gardener:  'works with plants and soil',
-    nurse:     'cares for people all through the night',
+    office:    'spends the daylight hours boxed in somewhere quiet, filed between paper and screens',
+    barista:   'starts before sunrise — hands always warm, always smelling of coffee',
+    courier:   'is paid to be everywhere at once, and crosses the city faster than the buses do',
+    student:   'lives on deadlines and cheap pens, always one all-nighter behind',
+    bartender: 'works where it is loud and dark, pouring drinks for people with stories',
+    gardener:  'keeps things alive for a living — mud on the cuffs, patience in the hands',
+    nurse:     'is awake while the whole city sleeps, holding other people together',
   };
   const MATTERP = {
-    ring:    'is carrying a question they are scared to ask',
-    letter:  'wrote something long ago and never sent it',
-    lighter: 'is trying to give up smoking',
-    pick:    'has one big chance to be heard',
-    collar:  'found an animal that belongs to someone else',
-    ticket:  'is about to leave the city for good',
+    ring:    'is rehearsing four words that could change two lives',
+    letter:  'has been carrying an apology for years, still sealed',
+    lighter: 'is at war with a small fire they used to love',
+    pick:    'is one nervous friday away from finally being heard',
+    collar:  'is falling for a creature whose tag carries someone else’s number',
+    ticket:  'has already said most of their goodbyes. the last one is dated friday, 06:12',
   };
   const WALKP = {
-    fidgety: 'is never quite still',
-    calm:    'moves like slow water',
-    heavy:   'walks heavy, like they are sorry about something',
-    quick:   'is always six minutes late',
-    tired:   'walks on tired legs',
+    fidgety: 'can never stand still — even resting, they twitch',
+    calm:    'moves like slow water, unhurried by anything',
+    heavy:   'walks heavy, like every street owes them an apology',
+    quick:   'hurries everywhere, forever six minutes behind the day',
+    tired:   'drags through the hours on worn-out legs',
   };
   SH.GUESSES = {
     work: OCCUPATIONS.map(o => ({ id: o.id, line: WORKP[o.id] })),

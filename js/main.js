@@ -208,6 +208,26 @@
           toast('the hole has ' + ev.label + '. drag it away, rub the hole to tighten its threads — or let it go.', true, 7000);
         else toast('the hole is working on ' + ev.label + '.');
         break;
+      case 'mothIn':
+        toast('a lint-moth has blown in. it is worth a thread, if you can catch it.');
+        break;
+      case 'mothGone':
+        toast('the moth found the way out. gone.');
+        break;
+      case 'mothCaught':
+        toast('caught. the moth becomes lint, the lint becomes a thread.');
+        Audio2.blip(990, 0.4, 0.03, 'triangle');
+        completeTask('moth');
+        break;
+      case 'caught':
+        completeTask('catch');
+        break;
+      case 'heldstill':
+        completeTask('still');
+        break;
+      case 'plugged':
+        toast(ev.label + ' is lying across the hole. nothing gets past it. remember that trick.', true, 6500);
+        break;
       case 'mended':
         if (tut.need('mend')) toast('you pulled the threads tighter. it will not hold forever.', true, 5500);
         if (g && g.impact && narrate.mendDay !== dayIdx) {
@@ -267,18 +287,21 @@
      at the final lineup. this is how watching, examining, hiding and
      mending all feed the same goal: knowing who they are. */
   function genTasks(resolved) {
-    const pool = [];
-    if (resolved.hands.some(h => !h.minor && (h.action === 'take')))
-      pool.push({ id: 'choice', text: 'the fingers come hunting today. make your call — help them, or hide it' });
+    // skill tasks first — threads should be earned, not clicked
+    const pool = [
+      { id: 'moth', text: 'a lint-moth visits today. corner it and catch it' },
+      { id: 'catch', text: 'catch something in mid-air, before it lands' },
+      { id: 'still', text: 'hold a thing dead still for five seconds while they are moving' },
+      { id: 'stack', text: 'leave one thing balanced on top of another at day’s end' },
+      { id: 'protect', text: 'let nothing fall through the hole today' },
+    ];
+    if (dayIdx >= 1) pool.push({ id: 'night', text: 'get a secret out of something at night' });
     if (resolved.hands.some(h => h.minor))
       pool.push({ id: 'fare', text: 'make sure the fingers find a coin today' });
-    if (dayIdx >= 1) pool.push({ id: 'night', text: 'get a secret out of something at night' });
-    pool.push({ id: 'watch', text: 'examine something while they sit or sleep' });
-    pool.push({ id: 'mend', text: 'stitch the hole once' });
-    pool.push({ id: 'protect', text: 'let nothing fall through the hole today' });
-    const picked = SH.shuffle(g.rng, pool).slice(0, 2);
-    g.tasks = [{ id: 'examine-new', text: 'examine something new', done: false }]
-      .concat(picked.map(t => ({ id: t.id, text: t.text, done: false })));
+    const tasks = SH.shuffle(g.rng, pool).slice(0, resolved.hands.some(h => !h.minor && h.action === 'take') ? 2 : 3);
+    if (resolved.hands.some(h => !h.minor && h.action === 'take'))
+      tasks.unshift({ id: 'choice', text: 'the fingers come hunting today. make your call — help them, or hide it' });
+    g.tasks = tasks.map(t => ({ id: t.id, text: t.text, done: false }));
     renderTasks();
   }
 
@@ -355,7 +378,7 @@
 
   function buildJournal() {
     let html = '<h3>the stranger</h3>';
-    html += '<div class="jentry">the walk: <i>' + g.motion.label + '</i> <span class="junk">(watch the top-left label — how do they move through a day?)</span></div>';
+    html += '<div class="jentry junk">the walk: watch them. feel the swaying, the speed, the fidgeting. no one will write this down for you.</div>';
     const workKnown = g.occ.filler.some(t => g.journal[t]);
     html += '<div class="jentry">the work: <i>' + (workKnown ? g.occ.line : 'unknown. examine the things their job drops in.') + '</i></div>';
     const key = g.arc.keyType;
@@ -696,6 +719,17 @@
   function endOfDay() {
     if (dayIdx === 0) tut.finish();
     if (SH.Sim.dayLost === 0) completeTask('protect');
+    // is anything balanced on anything?
+    const rest = g.items.filter(it => it.fate === 'in-pocket' && it.body && !it.def.chain);
+    outer:
+    for (const a of rest) {
+      for (const b of rest) {
+        if (a === b) continue;
+        const dx = Math.abs(a.body.position.x - b.body.position.x);
+        const dy = b.body.position.y - a.body.position.y; // a above b
+        if (dx < 26 && dy > 10 && dy < 48) { completeTask('stack'); break outer; }
+      }
+    }
     g.lastDayAllDone = !!(g.tasks && g.tasks.every(t => t.done));
     dayIdx++;
     if (dayIdx < 7) { startDayCard(); return; }
@@ -713,7 +747,7 @@
     const whispers = [];
     const wrong = g.suspects.filter(s => !s.correct && !g.suspectStruck[s.id]);
     let nW = 0;
-    if ((g.threads || 0) >= 10) nW = 2; else if ((g.threads || 0) >= 6) nW = 1;
+    if ((g.threads || 0) >= 9) nW = 2; else if ((g.threads || 0) >= 5) nW = 1;
     for (let i = 0; i < nW && wrong.length; i++) {
       const s = wrong.splice(Math.floor(Math.random() * wrong.length), 1)[0];
       g.suspectStruck[s.id] = true;
