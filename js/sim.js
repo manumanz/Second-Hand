@@ -365,19 +365,27 @@
     return best;
   };
 
-  /* ---------------- nudge input ---------------- */
+  /* ---------------- pointer input: grip, tug, mend ---------------- */
   let lastP = null;
+  sim.calmNow = function () {
+    return 0.18 + 0.82 * (1 - Math.min(1, (sim.act ? sim.act.intensity : 0)));
+  };
+
+  sim.gripAt = function (wx, wy) {
+    // press near a thing = the pocket's ghost takes hold of it
+    sim.dragIt = sim.itemAt(wx, wy);
+  };
+  sim.releaseGrip = function () { sim.dragIt = null; };
+
   sim.pointerMove = function (wx, wy, down) {
     const p = sim.pointer;
     p.x = wx; p.y = wy;
     if (down && p.down && lastP) {
       const dx = wx - lastP.x, dy = wy - lastP.y;
       const mag = Math.hypot(dx, dy);
+      const calm = sim.calmNow();
+      // rubbing across the hole pulls its threads tighter
       if (mag > 0.01) {
-        // never fully powerless, but much stronger when the owner rests
-        const calm = 0.18 + 0.82 * (1 - Math.min(1, (sim.act ? sim.act.intensity : 0)));
-        const k = 0.085 * calm;
-        // rubbing across the hole pulls its threads tighter
         const dh = Math.hypot(wx - sim.holeC.x, wy - sim.holeC.y);
         if (dh < sim.holeR + 55) {
           const before = sim.mend;
@@ -385,28 +393,35 @@
           if (before < 0.35 && sim.mend >= 0.35) sim.events.push({ type: 'mended' });
           sim.threadTwitch = Math.max(sim.threadTwitch, 0.25);
         }
-        for (const it of sim.g.items) {
-          const bodies = it.def.chain ? it.bodies : (it.body ? [it.body] : []);
-          for (const b of bodies) {
-            if (!b || it.fate !== 'in-pocket') continue;
-            const d = Math.hypot(b.position.x - wx, b.position.y - wy);
-            if (d < 140) {
-              const fall = 1 - d / 140;
-              let vx = b.velocity.x + dx * k * fall * 60 / Math.max(mag, 8) * Math.min(mag, 8);
-              let vy = b.velocity.y + dy * k * fall * 60 / Math.max(mag, 8) * Math.min(mag, 8);
-              const vm = Math.hypot(vx, vy);
-              if (vm > 7) { vx *= 7 / vm; vy *= 7 / vm; }
-              Body.setVelocity(b, { x: vx, y: vy });
-              sim.nudgeCount = (sim.nudgeCount || 0) + 1;
-            }
-          }
-        }
-        sim.ripple = Math.min(1, sim.ripple + mag * 0.02 * calm);
+        sim.ripple = Math.min(1, sim.ripple + mag * 0.015 * calm);
       }
     }
     lastP = { x: wx, y: wy };
     p.down = down;
+    if (!down) sim.dragIt = null;
   };
+
+  /* called every physics tick: the gripped item is tugged toward the pointer */
+  function updateGrip(dt) {
+    const it = sim.dragIt;
+    if (!it || it.fate !== 'in-pocket' || !sim.pointer.down) { if (!sim.pointer.down) sim.dragIt = null; return; }
+    if (sim.hand && sim.hand.grabbed === it) return; // the fingers win a tug-of-war
+    const calm = sim.calmNow();
+    const bodies = it.def.chain ? [it.bodies[0], it.bodies[it.bodies.length - 1]] : [it.body];
+    const b = bodies[0];
+    if (!b) return;
+    const dx = sim.pointer.x - b.position.x, dy = sim.pointer.y - b.position.y;
+    const d = Math.hypot(dx, dy);
+    if (d > 260) { sim.dragIt = null; return; } // torn loose
+    // follow the cursor: strong and direct at rest, mushy while they move
+    const maxSpeed = 1.5 + 10.5 * calm;
+    let vx = dx * 6 * dt * 60 * 0.12, vy = dy * 6 * dt * 60 * 0.12;
+    const vm = Math.hypot(vx, vy);
+    if (vm > maxSpeed) { vx *= maxSpeed / vm; vy *= maxSpeed / vm; }
+    Body.setVelocity(b, { x: vx, y: vy });
+    sim.nudgeCount = (sim.nudgeCount || 0) + 1;
+    sim.ripple = Math.max(sim.ripple, 0.25);
+  }
 
   /* ---------------- main update ---------------- */
   sim.update = function (dt) {
@@ -475,6 +490,7 @@
     if (!sim.hand && sim.hi < sim.hands.length && sim.hands[sim.hi].f * sim.dur <= sim.t) {
       startHand(sim.hands[sim.hi++]);
     }
+    updateGrip(dt);
     updateHand(dt);
     updateHole(dt);
 

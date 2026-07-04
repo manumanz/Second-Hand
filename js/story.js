@@ -489,6 +489,13 @@
     collar:  'found an animal that belongs to someone else',
     ticket:  'is about to leave the city for good',
   };
+  const WALKP = {
+    fidgety: 'is never quite still',
+    calm:    'moves like slow water',
+    heavy:   'walks heavy, like they are sorry about something',
+    quick:   'is always six minutes late',
+    tired:   'walks on tired legs',
+  };
   SH.GUESSES = {
     work: OCCUPATIONS.map(o => ({ id: o.id, line: WORKP[o.id] })),
     matter: ARCS.map(a => ({ id: a.id, line: MATTERP[a.id] })),
@@ -529,19 +536,22 @@
       },
     };
 
-    /* the suspect board: four possible people. one is real. */
+    /* the suspect board: four possible people. one is real.
+       one decoy is a TWIN — same job, same secret, different walk —
+       so the items alone can never settle it. you have to watch them move. */
     const works = SH.shuffle(r, OCCUPATIONS.map(o => o.id).filter(id => id !== occ.id));
     const matters = SH.shuffle(r, ARCS.map(a => a.id).filter(id => id !== arc.id));
+    const walks = SH.shuffle(r, MOTIONS.map(m => m.id).filter(id => id !== motion.id));
     const raw = [
-      { work: occ.id,   matter: arc.id,     correct: true },
-      { work: occ.id,   matter: matters[0], correct: false }, // right job, wrong secret
-      { work: works[0], matter: arc.id,     correct: false }, // wrong job, right secret
-      { work: works[1], matter: matters[1], correct: false }, // wrong on both
+      { work: occ.id,   matter: arc.id,     walk: motion.id, correct: true },
+      { work: occ.id,   matter: arc.id,     walk: walks[0],  correct: false }, // the twin
+      { work: works[0], matter: arc.id,     walk: motion.id, correct: false }, // wrong job
+      { work: occ.id,   matter: matters[0], walk: walks[1],  correct: false }, // wrong secret
     ];
     const NAMES = ['person one', 'person two', 'person three', 'person four'];
     g.suspects = SH.shuffle(r, raw).map((s, i) => ({
-      id: i, name: NAMES[i], work: s.work, matter: s.matter, correct: s.correct,
-      blurb: 'someone who ' + WORKP[s.work] + ', and who ' + MATTERP[s.matter] + '.',
+      id: i, name: NAMES[i], work: s.work, matter: s.matter, walk: s.walk, correct: s.correct,
+      blurb: 'someone who ' + WORKP[s.work] + ', who ' + MATTERP[s.matter] + ', and who ' + WALKP[s.walk] + '.',
     }));
     g.suspectPick = null;
     g.suspectStruck = {};

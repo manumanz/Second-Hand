@@ -210,9 +210,14 @@
         break;
       case 'mended':
         if (tut.need('mend')) toast('you pulled the threads tighter. it will not hold forever.', true, 5500);
+        if (g && g.impact && narrate.mendDay !== dayIdx) {
+          narrate.mendDay = dayIdx;
+          g.impact.push('day ' + (dayIdx + 1) + ': you stitched the hole tighter.');
+        }
         break;
       case 'gone':
         toast(ev.label + ' — gone. through the hole, into the world.');
+        if (g && g.impact) g.impact.push('day ' + (dayIdx + 1) + ': the hole took ' + ev.label + '.');
         break;
       case 'handStart':
         if (tut.need('hand'))
@@ -231,8 +236,17 @@
       case 'handEnd': {
         if (demo.active) { demo.flags.handResult = ev.result; break; }
         const m = ev.ev.minor;
-        if (ev.result === 'took') toast(m ? 'bus money found. the day moves on.' : 'they found ' + ev.label + '. it goes up into the light.');
-        else if (ev.result === 'miss') toast(m ? 'no coin to be found. a small sigh from above.' : 'they came up empty. that changes things.');
+        if (ev.result === 'took') {
+          toast(m ? 'bus money found. the day moves on.' : 'they found ' + ev.label + '. it goes up into the light.');
+          if (!m && g.impact) g.impact.push('day ' + (dayIdx + 1) + ': the fingers found ' + ev.label + '.');
+        } else if (ev.result === 'miss') {
+          // was it hidden? tell the player their trick worked.
+          const buried = g.items.some(it => it.type === ev.ev.seek && it.fate === 'in-pocket' && SH.Sim.isHidden(it));
+          if (m) toast('no coin to be found. a small sigh from above.');
+          else if (buried) toast('the fingers searched and searched. ' + ev.label + ' stayed buried in the dark corner. your doing.');
+          else toast('they came up empty. that changes things.');
+          if (!m && g.impact) g.impact.push('day ' + (dayIdx + 1) + ': the fingers hunted ' + ev.label + ' and left with nothing.' + (buried ? ' you hid it.' : ''));
+        }
         else if (ev.result === 'returned') toast(ev.label + ' — used, and put back.');
         else if (ev.result === 'peeked') toast(ev.label + ' — held, considered, put back.');
         break;
@@ -291,8 +305,8 @@
 
   function buildJournal() {
     let html = '<h3>the stranger</h3>';
-    html += '<div class="jentry">the walk: <i>' + g.motion.label + '</i></div>';
-    const workKnown = g.occ.filler.some(t => g.journal[t]) || dayIdx >= 3;
+    html += '<div class="jentry">the walk: <i>' + g.motion.label + '</i> <span class="junk">(watch the top-left label — how do they move through a day?)</span></div>';
+    const workKnown = g.occ.filler.some(t => g.journal[t]);
     html += '<div class="jentry">the work: <i>' + (workKnown ? g.occ.line : 'unknown. examine the things their job drops in.') + '</i></div>';
     const key = g.arc.keyType;
     if (g.journal[key]) html += '<div class="jentry">the matter at hand: <i>' + SH.ITEM_DEFS[key].read + '</i></div>';
@@ -310,6 +324,12 @@
         '<span class="susbtn" data-act="pick" data-sid="' + s.id + '">' + (picked ? 'unpick' : 'this is them') + '</span>' +
         '<span class="susbtn" data-act="strike" data-sid="' + s.id + '">' + (struck ? 'un-rule out' : 'rule out') + '</span>' +
         '</div></div>';
+    }
+    html += '<h3>what changed because of you</h3>';
+    if (g.impact && g.impact.length) {
+      for (const line of g.impact.slice(-8)) html += '<div class="jentry"><i>' + line + '</i></div>';
+    } else {
+      html += '<div class="jentry junk">nothing yet. the week is watching.</div>';
     }
     html += '<h3>evidence</h3>';
     const seenT = {}; let unexamined = 0, any = false;
@@ -570,10 +590,13 @@
   }
 
   /* ---------------- game flow ---------------- */
-  function newGame(seed) {
+  function newGame(seed, inherit) {
     g = SH.generateStranger(seed);
     g.journal = {};
     g.journalNight = {};
+    g.impact = [];
+    g.inherit = inherit || null;
+    narrate.mendDay = -1; narrate.hideHinted = false;
     SH.Sim.init(g);
     SH.Render.makeTextures(g);
     $('seedtag').textContent = 'stranger no. ' + g.seedId;
@@ -588,6 +611,15 @@
     state = 'card';
     $('hud').classList.add('hidden');
     resolved = SH.resolveDay(g, dayIdx);
+    // an inherited coat: the last stranger's leavings are already inside
+    if (dayIdx === 0 && g.inherit) {
+      resolved.lines.unshift(
+        'new hands chose me off the rail today: ' + g.inherit.owner + '.',
+        'the last one’s things are still in me. everything gets inherited eventually.');
+      for (const t of g.inherit.types.slice(0, 6))
+        resolved.drops.push({ f: SH.rf(g.rng, .05, .5), type: t });
+      resolved.drops.sort((a, b) => a.f - b.f);
+    }
     showCard(resolved.header, resolved.lines, () => {
       const segs = buildSchedule(g, resolved.mods);
       const dur = segs.reduce((s, x) => s + x.dur, 0);
@@ -692,6 +724,7 @@
     downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
     const w = SH.Render.toWorld(e.clientX, e.clientY);
     SH.Sim.pointerMove(w.x, w.y, true);
+    SH.Sim.gripAt(w.x, w.y);
   });
   window.addEventListener('pointerup', e => {
     // a short, still press is an examination, not a nudge
@@ -703,6 +736,7 @@
     }
     pdown = false; downAt = null;
     SH.Sim.pointer.down = false;
+    SH.Sim.releaseGrip();
   });
   cv.addEventListener('pointerleave', () => { SH.Sim.pointer.worldOK = false; });
 
@@ -743,6 +777,19 @@
 
   $('againbtn').addEventListener('click', () => {
     location.href = location.pathname; // fresh stranger, fresh seed
+  });
+
+  // the coat never stops: the next stranger IS the person who took it home
+  $('followbtn').addEventListener('click', () => {
+    const kept = [];
+    const seenT = {};
+    for (const it of g.items)
+      if (it.fate === 'in-pocket' && !seenT[it.type] && !it.def.chain) { seenT[it.type] = 1; kept.push(it.type); }
+    const inherit = { owner: g.newOwner, types: kept };
+    const nextSeed = SH.hashStr(g.seedId + '->coat') >>> 0;
+    $('end').classList.add('hidden');
+    dayIdx = 0;
+    newGame(nextSeed, inherit);
   });
 
   $('howtobtn').addEventListener('click', () => $('howto').classList.remove('hidden'));

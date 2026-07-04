@@ -474,6 +474,23 @@
     const calm = 1 - Math.min(1, sim.act ? sim.act.intensity : 0);
     const hov = sim.itemAt(p.x, p.y);
 
+    // gripped item: a taut thread from cursor to the thing you're tugging
+    if (sim.dragIt && sim.dragIt.body && sim.dragIt.fate === 'in-pocket' && p.down) {
+      const b = sim.dragIt.body;
+      ctx.strokeStyle = 'rgba(232,196,120,.4)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(b.position.x, b.position.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(232,196,120,.55)';
+      ctx.beginPath();
+      ctx.arc(b.position.x, b.position.y, 20, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
     // the ring: bright enough to always find, brighter still when you can act
     const a = (p.down ? 0.55 : 0.3) * (0.55 + calm * 0.45);
     ctx.strokeStyle = 'rgba(232,196,120,' + a.toFixed(3) + ')';
