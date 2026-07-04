@@ -6,13 +6,13 @@
 
   /* ---------------- schedule templates: a day in the life, by occupation ---------------- */
   const SCHED = {
-    office:    [['still', 6, 10], ['walk', 10, 14], ['bus', 10, 14], ['sit', 14, 20], ['walk', 6, 9], ['sit', 10, 16], ['walk', 8, 12], ['night', 10, 14]],
-    barista:   [['walk', 8, 12], ['brisk', 10, 14], ['still', 8, 12], ['walk', 8, 10], ['sit', 8, 12], ['walk', 6, 10], ['night', 10, 14]],
-    courier:   [['brisk', 8, 12], ['run', 8, 12], ['sit', 4, 7], ['run', 10, 14], ['walk', 6, 10], ['sit', 6, 10], ['night', 10, 12]],
-    student:   [['run', 5, 8], ['bus', 8, 12], ['sit', 16, 22], ['walk', 6, 9], ['sit', 10, 14], ['walk', 8, 12], ['night', 10, 14]],
-    bartender: [['sit', 8, 12], ['walk', 8, 12], ['still', 10, 14], ['brisk', 8, 12], ['walk', 10, 14], ['night', 8, 12]],
-    gardener:  [['walk', 8, 12], ['still', 10, 14], ['walk', 8, 12], ['sit', 6, 10], ['brisk', 6, 10], ['still', 8, 12], ['night', 10, 12]],
-    nurse:     [['night', 8, 10], ['walk', 6, 9], ['bus', 8, 10], ['still', 12, 16], ['brisk', 8, 12], ['still', 8, 12], ['night', 8, 10]],
+    office:    [['still', 6, 10], ['walk', 10, 14], ['bus', 10, 14], ['sit', 14, 20], ['walk', 6, 9], ['sit', 10, 16], ['walk', 8, 12], ['night', 17, 23]],
+    barista:   [['walk', 8, 12], ['brisk', 10, 14], ['still', 8, 12], ['walk', 8, 10], ['sit', 8, 12], ['walk', 6, 10], ['night', 17, 23]],
+    courier:   [['brisk', 8, 12], ['run', 8, 12], ['sit', 4, 7], ['run', 10, 14], ['walk', 6, 10], ['sit', 6, 10], ['night', 16, 21]],
+    student:   [['run', 5, 8], ['bus', 8, 12], ['sit', 16, 22], ['walk', 6, 9], ['sit', 10, 14], ['walk', 8, 12], ['night', 17, 23]],
+    bartender: [['sit', 8, 12], ['walk', 8, 12], ['still', 10, 14], ['brisk', 8, 12], ['walk', 10, 14], ['night', 16, 21]],
+    gardener:  [['walk', 8, 12], ['still', 10, 14], ['walk', 8, 12], ['sit', 6, 10], ['brisk', 6, 10], ['still', 8, 12], ['night', 16, 21]],
+    nurse:     [['night', 14, 18], ['walk', 6, 9], ['bus', 8, 10], ['still', 12, 16], ['brisk', 8, 12], ['still', 8, 12], ['night', 14, 18]],
   };
 
   function buildSchedule(g, mods) {
@@ -102,33 +102,59 @@
     },
     stopNoir() { if (this.noirInt) { clearInterval(this.noirInt); this.noirInt = null; } },
     noirStep() {
+      /* a-minor, slow synth pads, walking bass, distant horn — a case file in 1984 */
       const t = this.ctx.currentTime, n = this.noirN++;
-      const bass = [110, 98, 130.81, 110, 146.83, 123.47, 110, 87.31];
-      if (n % 2 === 0) {
-        const o = this.ctx.createOscillator(); o.type = 'sine';
-        o.frequency.value = bass[(n / 2 | 0) % bass.length];
-        const g2 = this.ctx.createGain();
-        g2.gain.setValueAtTime(0.1, t);
-        g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.95);
-        const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420;
-        o.connect(g2); g2.connect(lp); lp.connect(this.master);
-        o.start(t); o.stop(t + 1);
+      const CHORDS = [ // Am, F, Dm, E — the oldest sad story in music
+        [110, 130.81, 164.81],
+        [87.31, 110, 130.81],
+        [73.42, 87.31, 110],
+        [82.41, 103.83, 123.47],
+      ];
+      const ci = (n / 8 | 0) % 4;
+      if (n % 8 === 0) { // detuned saw pad, one chord per bar — the VHS fog
+        for (const f of CHORDS[ci]) {
+          for (const det of [-4, 4]) {
+            const o = this.ctx.createOscillator(); o.type = 'sawtooth';
+            o.frequency.value = f * Math.pow(2, det / 1200) * 2;
+            const g2 = this.ctx.createGain();
+            g2.gain.setValueAtTime(0, t);
+            g2.gain.linearRampToValueAtTime(0.0055, t + 1.4);
+            g2.gain.setValueAtTime(0.0055, t + 4);
+            g2.gain.linearRampToValueAtTime(0, t + 5.8);
+            const lp = this.ctx.createBiquadFilter();
+            lp.type = 'lowpass'; lp.frequency.value = 480; lp.Q.value = 0.8;
+            o.connect(g2); g2.connect(lp); lp.connect(this.master);
+            o.start(t); o.stop(t + 6);
+          }
+        }
       }
-      if (Math.random() < 0.11) {
+      if (n % 2 === 0) { // pizzicato bass walking inside the chord
+        const ch = CHORDS[ci];
+        const f = ch[[0, 2, 1, 2][(n / 2 | 0) % 4]];
+        const o = this.ctx.createOscillator(); o.type = 'sine';
+        o.frequency.value = f;
+        const g2 = this.ctx.createGain();
+        g2.gain.setValueAtTime(0.11, t);
+        g2.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+        const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 380;
+        o.connect(g2); g2.connect(lp); lp.connect(this.master);
+        o.start(t); o.stop(t + 1.2);
+      }
+      if (Math.random() < 0.09) { // the horn on the wet street, strictly minor
         const o = this.ctx.createOscillator(); o.type = 'triangle';
-        o.frequency.value = [233.08, 261.63, 311.13, 349.23][Math.random() * 4 | 0];
-        const v = this.ctx.createOscillator(); v.frequency.value = 5.3;
-        const vg = this.ctx.createGain(); vg.gain.value = 3.5;
+        o.frequency.value = [220, 261.63, 293.66, 329.63][Math.random() * 4 | 0];
+        const v = this.ctx.createOscillator(); v.frequency.value = 4.8;
+        const vg = this.ctx.createGain(); vg.gain.value = 4;
         v.connect(vg); vg.connect(o.frequency);
         const g2 = this.ctx.createGain();
         g2.gain.setValueAtTime(0, t);
-        g2.gain.linearRampToValueAtTime(0.015, t + 0.55);
-        g2.gain.linearRampToValueAtTime(0, t + 2.4);
-        const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
+        g2.gain.linearRampToValueAtTime(0.014, t + 0.7);
+        g2.gain.linearRampToValueAtTime(0, t + 3.1);
+        const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 850;
         o.connect(g2); g2.connect(lp); lp.connect(this.master);
-        o.start(t); o.stop(t + 2.5); v.start(t); v.stop(t + 2.5);
+        o.start(t); o.stop(t + 3.2); v.start(t); v.stop(t + 3.2);
       }
-      if (Math.random() < 0.5) this.noiseHit(0.004, 3200, 0.02);
+      if (Math.random() < 0.5) this.noiseHit(0.004, 3200, 0.02); // vinyl dust
     },
     handle(ev) {
       if (ev.type === 'thump') this.noiseHit(0.16 * ev.mag, 240, 0.07);
@@ -196,6 +222,10 @@
         else {
           const d = SH.ITEM_DEFS[ev.ev.seek];
           toast('the fingers are hunting: ' + (d ? d.label : 'something') + '.');
+          if (!narrate.hideHinted) {
+            narrate.hideHinted = true;
+            setTimeout(() => toast('(to hide it: drag it into the dark corner, low on the left.)', true, 6000), 4500);
+          }
         }
         break;
       case 'handEnd': {
@@ -299,6 +329,38 @@
     finish() { try { localStorage.setItem('sh_tut', '1'); } catch (e) {} },
   };
 
+  /* ---------------- voice: the pocket reads its own diary ---------------- */
+  const Voice = {
+    on: localStorage.getItem('sh_voice') !== '0',
+    voice: null,
+    pickVoice() {
+      if (this.voice || !window.speechSynthesis) return;
+      const vs = speechSynthesis.getVoices();
+      this.voice = vs.find(v => /en-GB/i.test(v.lang) && /male|ryan|george|arthur/i.test(v.name)) ||
+                   vs.find(v => /en-GB/i.test(v.lang)) ||
+                   vs.find(v => /^en/i.test(v.lang)) || null;
+    },
+    speak(text) {
+      if (!this.on || !window.speechSynthesis) return;
+      try {
+        speechSynthesis.cancel();
+        this.pickVoice();
+        const u = new SpeechSynthesisUtterance(text);
+        if (this.voice) u.voice = this.voice;
+        u.rate = 0.82; u.pitch = 0.7; u.volume = 0.85;
+        speechSynthesis.speak(u);
+      } catch (e) {}
+    },
+    stop() { try { speechSynthesis.cancel(); } catch (e) {} },
+    toggle() {
+      this.on = !this.on;
+      localStorage.setItem('sh_voice', this.on ? '1' : '0');
+      if (!this.on) this.stop();
+      $('voicebtn').textContent = 'voice: ' + (this.on ? 'on' : 'off');
+    },
+  };
+  if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => Voice.pickVoice();
+
   /* ---------------- overlays ---------------- */
   function showCard(head, lines, onGo) {
     const cardEl = $('card'), headEl = $('cardhead'), linesEl = $('cardlines'), go = $('cardgo');
@@ -312,6 +374,7 @@
       return p;
     });
     cardEl.classList.remove('hidden');
+    Voice.speak(head.replace(/—/g, ',').toLowerCase() + '. ' + lines.join(' '));
     ps.forEach((p, i) => setTimeout(() => p.classList.add('on'), 350 + i * 900));
     const readyAt = 350 + ps.length * 900 + 300;
     setTimeout(() => go.classList.add('on'), readyAt);
@@ -326,6 +389,7 @@
       }
       cardEl.classList.add('hidden');
       cardEl.removeEventListener('click', advance);
+      Voice.stop();
       onGo();
     };
     cardEl.addEventListener('click', advance);
@@ -385,7 +449,7 @@
       done() { return SH.Sim.mend > 0.4; },
     },
     {
-      text: 'listen — the fingers are coming down for that coin. your choice: leave it findable, or drag it far away and hide it.',
+      text: 'listen — the fingers are coming down for that coin. leave it findable, or drag it into the dark lint corner, low on the left — they never search there.',
       enter() {
         if (!g.items.some(i => i.type === 'coin' && i.fate === 'in-pocket')) SH.Sim.spawnItem('coin');
         SH.Sim.hands = [{ f: (SH.Sim.t + 2.5) / SH.Sim.dur, seek: 'coin', action: 'take', minor: true }];
@@ -504,13 +568,44 @@
     if (dayIdx === 0) tut.finish();
     dayIdx++;
     if (dayIdx < 7) { startDayCard(); return; }
-    // seven days done → epilogue
+    // seven days done → first, the reading of the stranger
+    state = 'guess';
+    $('hud').classList.add('hidden');
+    showGuess();
+  }
+
+  /* the deduction: who were they? */
+  function showGuess() {
+    const mk = (boxId, opts, key) => {
+      const box = $(boxId);
+      box.innerHTML = '';
+      SH.shuffle(SH.mulberry32(g.seed ^ 0x51ed), opts).forEach(o => {
+        const b = document.createElement('button');
+        b.className = 'gopt';
+        b.textContent = o.line;
+        b.addEventListener('click', () => {
+          g[key] = o.id;
+          for (const c of box.children) c.classList.remove('sel');
+          b.classList.add('sel');
+          $('guessgo').disabled = !(g.guessWork && g.guessMatter);
+        });
+        box.appendChild(b);
+      });
+    };
+    g.guessWork = null; g.guessMatter = null;
+    mk('gwork', SH.GUESSES.work, 'guessWork');
+    mk('gmatter', SH.GUESSES.matter, 'guessMatter');
+    $('guessgo').disabled = true;
+    $('guess').classList.remove('hidden');
+  }
+
+  $('guessgo').addEventListener('click', () => {
+    $('guess').classList.add('hidden');
     epiCards = SH.buildEpilogue(g);
     epiIdx = 0;
     state = 'epilogue';
-    $('hud').classList.add('hidden');
     nextEpi();
-  }
+  });
 
   function nextEpi() {
     if (epiIdx >= epiCards.length) { showEnd(); return; }
@@ -524,6 +619,21 @@
     $('endseed').textContent = g.seedId;
     const list = $('fatelist');
     list.innerHTML = '';
+    // the verdict on your reading of them
+    if (g.guessWork || g.guessMatter) {
+      const wOK = g.guessWork === g.occ.id, mOK = g.guessMatter === g.arc.id;
+      const v = document.createElement('div');
+      v.style.marginBottom = '18px';
+      v.innerHTML =
+        'your reading of them:<br>' +
+        'the work — <span class="' + (wOK ? 'fate-kept' : 'fate-lost') + '">' +
+        (wOK ? 'right' : 'wrong. ' + g.occ.line) + '</span><br>' +
+        'the matter — <span class="' + (mOK ? 'fate-kept' : 'fate-lost') + '">' +
+        (mOK ? 'right' : 'wrong. it was: ' + SH.GUESSES.matter.find(m => m.id === g.arc.id).line) + '</span><br>' +
+        '<span style="color:#c9b463">' + (wOK && mOK ? 'you would make a fine pocket.' :
+          (wOK || mOK) ? 'half-read. most people are.' : 'strangers keep their secrets. that is fair too.') + '</span>';
+      list.appendChild(v);
+    }
     const FATE = {
       'in-pocket': ['passed on with the coat', 'fate-kept'],
       'taken': ['taken by the fingers', 'fate-taken'],
@@ -623,6 +733,9 @@
 
   $('demobtn').addEventListener('click', startDemo);
   $('tutskip').addEventListener('click', endDemo);
+
+  $('voicebtn').textContent = 'voice: ' + (Voice.on ? 'on' : 'off');
+  $('voicebtn').addEventListener('click', e => { e.stopPropagation(); Voice.toggle(); });
 
   // the title hums like the start of a case
   $('title').addEventListener('pointerdown', () => Audio2.startNoir(), { once: true });

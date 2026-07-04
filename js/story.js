@@ -473,6 +473,19 @@
     },
   });
 
+  /* options for the end-of-week deduction */
+  SH.GUESSES = {
+    work: OCCUPATIONS.map(o => ({ id: o.id, line: o.line })),
+    matter: [
+      { id: 'ring',    line: 'a question, about to be asked' },
+      { id: 'letter',  line: 'words unsent for years' },
+      { id: 'lighter', line: 'a fire being given up' },
+      { id: 'pick',    line: 'one shot at being heard' },
+      { id: 'collar',  line: 'a creature that belongs to someone else' },
+      { id: 'ticket',  line: 'a one-way departure' },
+    ],
+  };
+
   /* =======================================================================
      GENERATOR
      ======================================================================= */

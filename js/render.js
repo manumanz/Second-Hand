@@ -207,6 +207,31 @@
     ctx.stroke();
   }
 
+  function drawHideCorner() {
+    const sim = SH.Sim;
+    if (!sim.hideC) return;
+    const { x, y } = sim.hideC;
+    // a drift of shadow and lint the light never quite reaches
+    const gr = ctx.createRadialGradient(x, y, 8, x, y, 105);
+    gr.addColorStop(0, 'rgba(0,0,0,.5)');
+    gr.addColorStop(0.7, 'rgba(0,0,0,.28)');
+    gr.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gr;
+    ctx.fillRect(x - 105, y - 105, 210, 210);
+    // resident lint tufts
+    ctx.strokeStyle = 'rgba(120,100,70,.22)';
+    ctx.lineWidth = 0.9;
+    for (let i = 0; i < 7; i++) {
+      const a = i * 0.9, r0 = 20 + (i * 13) % 55;
+      const lx = x + Math.cos(a) * r0, ly = y + Math.sin(a) * r0 * 0.7;
+      const n = SH.noise2(i * 5.1, T * 0.4) - 0.5;
+      ctx.beginPath();
+      ctx.moveTo(lx, ly);
+      ctx.quadraticCurveTo(lx + 5 + n * 4, ly - 4, lx + 10 + n * 6, ly + 2 + n * 3);
+      ctx.stroke();
+    }
+  }
+
   function drawHole() {
     const sim = SH.Sim;
     if (!sim.holeC) return;
@@ -468,7 +493,7 @@
     // hover label: identify what the eye has found
     if (hov) {
       const seen = sim.g && sim.g.journal && sim.g.journal[hov.type];
-      const txt = hov.label + (seen ? '' : '  ·  unexamined');
+      const txt = hov.label + (sim.isHidden(hov) ? '  ·  hidden from the fingers' : (seen ? '' : '  ·  unexamined'));
       ctx.font = 'italic 17px Georgia, serif';
       const tw = ctx.measureText(txt).width;
       let tx = p.x + 22, ty = p.y - 18;
@@ -500,6 +525,7 @@
     drawShaft(0.6, true);
     drawHole();
     if (sim.g) for (const it of sim.g.items) drawItem(it);
+    drawHideCorner(); // shadow falls OVER whatever is buried there
     drawHand();
     drawShaft(0.35, false);
     drawLint(dt);

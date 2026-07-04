@@ -42,6 +42,13 @@
 
   sim.effHoleR = function () { return sim.holeR * (1 - 0.5 * sim.mend); };
 
+  /* the dark corner: a lint-drift low on the left where the fingers never think to check */
+  sim.hideC = { x: 284, y: 890 };
+  sim.isHidden = function (it) {
+    if (!it || !it.body) return false;
+    return Math.hypot(it.body.position.x - sim.hideC.x, it.body.position.y - sim.hideC.y) < 95;
+  };
+
   /* activity table — how the unseen owner's movement reaches us */
   const ACT = SH.ACT = {
     still:   { swayA: .04, swayF: .35, jolt: 0,    joltEvery: 0,   gA: 0,    light: .8,  intensity: .05 },
@@ -135,7 +142,8 @@
     let target = null;
     if (ev.action !== 'give') {
       const cands = g.items.filter(it =>
-        it.type === ev.seek && it.fate === 'in-pocket' && it.body && !it.def.chain);
+        it.type === ev.seek && it.fate === 'in-pocket' && it.body && !it.def.chain &&
+        !sim.isHidden(it)); // buried in the lint corner = invisible to the fingers
       if (ev.wantLucky) {
         target = cands.find(it => it.opts.lucky) || cands[0] || null;
       } else if (cands.length) {
@@ -182,9 +190,12 @@
     h.pt += dt;
     const wig = (SH.noise1(h.pt * 2.1 + h.wiggleSeed) - 0.5) * 26;
 
+    const targetLive = () =>
+      h.target && h.target.fate === 'in-pocket' && h.target.body && !sim.isHidden(h.target);
+
     const targetX = () => {
       if (h.grabbed || ev.action === 'give') return h.x;
-      if (h.target && h.target.fate === 'in-pocket')
+      if (targetLive())
         return h.x + (h.target.body.position.x - h.x) * 0.06; // lazy tracking: pushable away
       return h.x + (SH.noise1(h.pt * 0.8 + h.wiggleSeed) - 0.5) * 3;
     };
@@ -193,19 +204,19 @@
       case 'enter': {
         h.x = targetX();
         const targY = (ev.action === 'give') ? 620 :
-          (h.target && h.target.fate === 'in-pocket') ? Math.min(920, h.target.body.position.y - 26) : 780;
+          targetLive() ? Math.min(920, h.target.body.position.y - 26) : 780;
         h.y += Math.min(260 * dt, Math.max(30 * dt, (targY - h.y) * 1.6 * dt));
         if (h.y >= targY - 4) { h.phase = (ev.action === 'give') ? 'deposit' : 'grab'; h.pt = 0; }
         break;
       }
       case 'grab': {
         h.x = targetX() + wig * 0.4;
-        if (h.target && h.target.fate === 'in-pocket')
+        if (targetLive())
           h.y += (Math.min(920, h.target.body.position.y - 26) - h.y) * 2.2 * dt;
         if (h.pt > 0.55) {
           const reach = h.searched ? 130 : 95;
           let got = null;
-          if (h.target && h.target.fate === 'in-pocket') {
+          if (targetLive()) {
             const d = Math.hypot(h.target.body.position.x - h.x, h.target.body.position.y - h.y);
             if (d < reach) got = h.target;
           }
@@ -230,7 +241,7 @@
         h.y += Math.cos(h.pt * 3.1) * 60 * dt;
         h.y = Math.min(950, Math.max(500, h.y));
         h.x = Math.min(700, Math.max(200, h.x));
-        if (h.target && h.target.fate === 'in-pocket') {
+        if (targetLive()) {
           h.x += (h.target.body.position.x - h.x) * 2.4 * dt;
           h.y += (Math.min(930, h.target.body.position.y - 20) - h.y) * 1.8 * dt;
         }
@@ -311,14 +322,23 @@
       // grabbed items don't slip
       if (sim.hand && sim.hand.grabbed === it) continue;
       const d = Math.hypot(it.body.position.x - sim.holeC.x, it.body.position.y - sim.holeC.y);
-      if (d < holeR + 10) {
-        // has to work its way through the fraying threads first — a chance to intervene
+      // the hole breathes in: small things nearby feel a gentle, insistent pull
+      if (d < holeR + 75 && d > 1) {
+        const pull = 60 * (1 - d / (holeR + 75)) * (1 - 0.7 * sim.mend);
+        const dx = (sim.holeC.x - it.body.position.x) / d, dy = (sim.holeC.y - it.body.position.y) / d;
+        Body.setVelocity(it.body, {
+          x: it.body.velocity.x + dx * pull * dt,
+          y: it.body.velocity.y + dy * pull * dt,
+        });
+      }
+      if (d < holeR + 12) {
+        // it still has to work through the fraying threads — a chance to intervene
         it.holeTime = (it.holeTime || 0) + dt;
-        if (it.holeTime > 0.25) {
+        if (it.holeTime > 0.2) {
           sim.threadTwitch = Math.max(sim.threadTwitch, 0.35);
           if (!it.holeWarned) { it.holeWarned = true; sim.events.push({ type: 'holeNear', label: it.label }); }
         }
-        if (it.holeTime > 1.1) {
+        if (it.holeTime > 0.7) {
           it.slipping = true; it.slipT = 0;
           it.body.collisionFilter.mask = 0;
           sim.threadTwitch = 1;
