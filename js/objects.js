@@ -324,6 +324,20 @@
     make: null, geom: () => ({}), detail() {},
   });
 
+  def('grub', {
+    label: 'a hungry grub', mat: 'organic', passSize: 6,
+    make: CIRC(7, { density: 0.0008, frictionAir: 0.05 }),
+    geom: () => ({ outline: subdiv([[7, 0], [4, 4], [-1, 5], [-6, 3], [-7, -1], [-4, -4], [2, -5]], 3) }),
+    detail(ctx) {
+      ctx.beginPath(); ctx.moveTo(-4, -2); ctx.lineTo(-4, 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -3); ctx.lineTo(0, 3); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(3, -2); ctx.lineTo(3, 2); ctx.stroke();
+    },
+    desc: 'small, pale, wriggling. it should not be in here.',
+    read: 'it eats paper. your evidence is its dinner. throw it out through the mouth — or feed it to the hole.',
+    night: 'in the blue light you can see right through it. inside: tiny pieces of somebody’s receipts.',
+  });
+
   /* ---------- lore: what a thing is, and what it betrays ---------- */
   const LORE = {
     coin:       { desc: 'cold, round, honest. money for small errands.', read: 'they pay with coins. coin people are either careful or broke — often both.' },

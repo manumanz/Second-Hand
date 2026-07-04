@@ -36,10 +36,15 @@
     dayLost: 0, swayNow: 0, lightLevel: 0.8, lightCol: 'warm',
     joltTimer: 0, coinTimer: 0, events: [],
     threadTwitch: 0, ripple: 0, mend: 0,
+    gumPatch: 0, crisis: null, crisisAt: null, crisisType: null,
+    examCh: null,
     pointer: { x: 0, y: 0, down: false, worldOK: false },
   };
 
-  sim.effHoleR = function () { return sim.holeR * (1 - 0.5 * sim.mend); };
+  sim.effHoleR = function () {
+    if (sim.gumPatch > 0) return 0; // gummed shut
+    return sim.holeR * (1 - 0.5 * sim.mend);
+  };
 
   /* the dark corner: a lint-drift low on the left where the fingers never think to check */
   sim.hideC = { x: 284, y: 890 };
@@ -131,6 +136,14 @@
     sim.mothDone = false;
     sim.mothAt = SH.rf(sim.g.rng, 0.15, 0.55) * durSec;
     sim.stillT = 0;
+    sim.examCh = null;
+    sim.gumPatch = 0;
+    // scheduled dangers, decided by the day planner
+    const ex = dayResolved.extra || {};
+    sim.crisis = null;
+    sim.crisisAt = ex.crisisF ? ex.crisisF * durSec : null;
+    sim.crisisType = ex.crisisType || null;
+    if (ex.grub) sim.grubAt = SH.rf(sim.g.rng, 0.2, 0.5) * durSec; else sim.grubAt = null;
     sim.setSeg(0);
   };
 
@@ -184,7 +197,19 @@
   function startHand(ev) {
     const g = sim.g;
     let target = null;
-    if (ev.action !== 'give') {
+    if (ev.thief) {
+      // a stranger's hand: it wants the most precious thing it can see
+      const val = it =>
+        it.type === g.arc.keyType ? 10 :
+        (it.type === 'photo' || it.type === 'napkin') ? 4 :
+        it.type === 'lighter' ? 3 :
+        it.type === 'coin' ? 2 : 1;
+      const cands = g.items.filter(it =>
+        it.fate === 'in-pocket' && it.body && !it.def.chain &&
+        it.type !== 'grub' && !sim.isHidden(it));
+      cands.sort((a, b) => val(b) - val(a));
+      target = cands[0] || null;
+    } else if (ev.action !== 'give') {
       const cands = g.items.filter(it =>
         it.type === ev.seek && it.fate === 'in-pocket' && it.body && !it.def.chain &&
         !sim.isHidden(it)); // buried in the lint corner = invisible to the fingers
@@ -213,8 +238,17 @@
     if (h.constraint) { Composite.remove(sim.world, h.constraint); h.constraint = null; }
     if (result === 'took' && h.grabbed) {
       Composite.remove(sim.world, h.grabbed.body);
-      h.grabbed.fate = 'taken';
-      if (ev.flag) g.flags[ev.flag] = true;
+      if (ev.thief) {
+        // stolen: gone from the story, and the stranger will feel it
+        h.grabbed.fate = 'lost';
+        h.grabbed.stolen = true;
+        h.grabbed.body = null;
+        sim.dayLost++;
+        if (h.grabbed.type === g.arc.keyType) g.flags[h.grabbed.type + 'Lost'] = true;
+      } else {
+        h.grabbed.fate = 'taken';
+        if (ev.flag) g.flags[ev.flag] = true;
+      }
     } else if (result === 'returned') {
       if (ev.flag && h.grabbed) g.flags[ev.flag] = true; // e.g. cave1 — they used it and put it back
     } else if (result === 'miss') {
@@ -231,6 +265,7 @@
     const h = sim.hand;
     if (!h) return;
     const ev = h.ev;
+    if (ev.thief) dt = dt * 1.7; // a thief's hand is quick
     h.pt += dt;
     const wig = (SH.noise1(h.pt * 2.1 + h.wiggleSeed) - 0.5) * 26;
 
@@ -263,6 +298,17 @@
           if (targetLive()) {
             const d = Math.hypot(h.target.body.position.x - h.x, h.target.body.position.y - h.y);
             if (d < reach) got = h.target;
+          }
+          // a thief in a hurry will take a decoy coin shoved into its path
+          if (ev.thief) {
+            let bestCoin = null, bd = 75;
+            for (const it of sim.g.items) {
+              if (it.type !== 'coin' || it.fate !== 'in-pocket' || !it.body) continue;
+              const dc = Math.hypot(it.body.position.x - h.x, it.body.position.y - h.y);
+              if (dc < bd) { bd = dc; bestCoin = it; }
+            }
+            if (bestCoin && (!got || bd < Math.hypot(got.body.position.x - h.x, got.body.position.y - h.y)))
+              got = bestCoin;
           }
           if (got) {
             h.grabbed = got;
@@ -354,9 +400,13 @@
           Composite.remove(sim.world, it.body);
           it.fate = 'lost';
           it.body = null;
-          sim.dayLost++;
-          if (it.type === g.arc.keyType) g.flags[it.type + 'Lost'] = true;
-          sim.events.push({ type: 'gone', label: it.label });
+          if (it.type === 'grub') {
+            sim.events.push({ type: 'grubEaten' }); // good riddance, no harm done
+          } else {
+            sim.dayLost++;
+            if (it.type === g.arc.keyType) g.flags[it.type + 'Lost'] = true;
+            sim.events.push({ type: 'gone', label: it.label, cause: 'hole' });
+          }
           sim.threadTwitch = 1;
         }
         continue;
@@ -442,8 +492,24 @@
         (sim.t - it.dropT) < 2.4 && it.body.position.y < 620 && it.body.velocity.y > 0.8) {
       sim.events.push({ type: 'caught', label: it.label });
     }
+    // holding still on a thing starts an examination — it takes time,
+    // and it takes much longer when the owner is on the move
+    if (it) sim.examCh = { it, t: 0, sx: wx, sy: wy };
   };
-  sim.releaseGrip = function () { sim.dragIt = null; };
+  sim.releaseGrip = function () {
+    // letting go of chewed gum on the hole = a sticky patch
+    const it = sim.dragIt;
+    if (it && it.type === 'gum' && it.fate === 'in-pocket' && it.body &&
+        Math.hypot(it.body.position.x - sim.holeC.x, it.body.position.y - sim.holeC.y) < sim.holeR + 16) {
+      Composite.remove(sim.world, it.body);
+      it.body = null;
+      it.fate = 'used';
+      sim.gumPatch = 55;
+      sim.events.push({ type: 'gummed' });
+    }
+    sim.dragIt = null;
+    sim.examCh = null;
+  };
 
   sim.pointerMove = function (wx, wy, down) {
     const p = sim.pointer;
@@ -499,6 +565,153 @@
     } else if (sim.stillT < 900) {
       sim.stillT = 0;
     }
+    // lighter-light: hold the flame near another thing and it confesses early
+    if (it.type === 'lighter' && (it.opts.fuel === undefined || it.opts.fuel > 0)) {
+      let near = null, nd = 46;
+      for (const o of sim.g.items) {
+        if (o === it || o.fate !== 'in-pocket' || !o.body || o.def.chain || o.type === 'grub') continue;
+        const dd = Math.hypot(o.body.position.x - b.position.x, o.body.position.y - b.position.y);
+        if (dd < nd) { nd = dd; near = o; }
+      }
+      if (near && near === sim.flameLast) {
+        sim.flameT += dt;
+        if (sim.flameT > 1.5) {
+          sim.flameT = -2;
+          if (it.opts.fuel === undefined) it.opts.fuel = 2;
+          it.opts.fuel--;
+          sim.events.push({ type: 'flame', target: near, left: it.opts.fuel });
+        }
+      } else { sim.flameLast = near; sim.flameT = 0; }
+    }
+  }
+
+  /* the examination channel: hold still on a thing until it gives itself up */
+  function updateExam(dt) {
+    const ch = sim.examCh;
+    if (!ch) return;
+    if (!sim.pointer.down || sim.dragIt !== ch.it || ch.it.fate !== 'in-pocket') { sim.examCh = null; return; }
+    if (Math.hypot(sim.pointer.x - ch.sx, sim.pointer.y - ch.sy) > 18) { sim.examCh = null; return; } // that's a drag, not a look
+    const calm = sim.calmNow();
+    ch.t += dt * (0.3 + 1.7 * calm);
+    if (ch.t >= 1.1) {
+      sim.events.push({ type: 'examined', it: ch.it });
+      sim.examCh = null;
+    }
+  }
+
+  /* ---------------- crises: the wash, the spill ---------------- */
+  function updateCrisis(dt) {
+    const g = sim.g;
+    if (!sim.crisis) {
+      if (sim.crisisAt !== null && sim.t > sim.crisisAt) {
+        sim.crisis = { type: sim.crisisType || 'wash', phase: 'warn', t: 0 };
+        sim.events.push({ type: 'crisisWarn', crisis: sim.crisis.type });
+      }
+      return;
+    }
+    const c = sim.crisis;
+    c.t += dt;
+    if (c.phase === 'warn' && c.t > 3.5) { c.phase = 'active'; c.t = 0; sim.events.push({ type: 'crisisStart', crisis: c.type }); }
+    else if (c.phase === 'active') {
+      if (c.type === 'wash') {
+        // the drum: gravity spins, everything tumbles, the light strobes
+        const a = c.t * 4.2;
+        sim.engine.gravity.x = Math.sin(a) * 1.25;
+        sim.engine.gravity.y = Math.cos(a) * 1.25;
+        sim.lightLevel *= 0.4 + Math.abs(SH.noise1(c.t * 7)) * 0.9;
+        if (c.t > 8) {
+          // the reckoning: unprotected paper is ruined
+          for (const it of g.items) {
+            if (it.fate !== 'in-pocket' || !it.body || it.mat !== 'paper') continue;
+            const safe = sim.isHidden(it) || sim.dragIt === it;
+            if (safe) continue;
+            if (it.damaged) {
+              Composite.remove(sim.world, it.body);
+              it.body = null; it.fate = 'lost'; it.ruined = true;
+              sim.dayLost++;
+              if (it.type === g.arc.keyType) g.flags[it.type + 'Lost'] = true;
+              sim.events.push({ type: 'gone', label: it.label, cause: 'wash' });
+            } else {
+              it.damaged = true;
+            }
+          }
+          sim.events.push({ type: 'crisisEnd', crisis: 'wash' });
+          sim.crisis = null; sim.crisisAt = null;
+        }
+      } else { // 'fall': the coat slips — everything rushes for the mouth
+        sim.engine.gravity.y = -1.35;
+        sim.engine.gravity.x = sim.swayNow * 0.5;
+        for (const it of g.items) {
+          const bodies = it.def.chain ? it.bodies : (it.body ? [it.body] : []);
+          for (const b of bodies) {
+            if (!b || it.fate !== 'in-pocket') continue;
+            if (sim.isHidden(it) || sim.dragIt === it) { // the corner holds its own
+              Body.setVelocity(b, { x: b.velocity.x, y: b.velocity.y + 2.6 * dt * 60 * 0.045 });
+              continue;
+            }
+            if (b.position.y < 75 && !it.def.chain) {
+              Composite.remove(sim.world, b);
+              it.body = null; it.fate = 'lost';
+              sim.dayLost++;
+              if (it.type === g.arc.keyType) g.flags[it.type + 'Lost'] = true;
+              sim.events.push({ type: 'gone', label: it.label, cause: 'fall' });
+            }
+          }
+        }
+        if (c.t > 3.6) { sim.events.push({ type: 'crisisEnd', crisis: 'fall' }); sim.crisis = null; sim.crisisAt = null; }
+      }
+    }
+  }
+
+  /* ---------------- the grub: it eats the evidence ---------------- */
+  function updateGrub(dt) {
+    const g = sim.g;
+    if (sim.grubAt !== null && sim.t > sim.grubAt) {
+      sim.grubAt = null;
+      const grub = sim.spawnItem('grub');
+      if (grub) sim.events.push({ type: 'grubIn' });
+    }
+    const grub = g.items.find(it => it.type === 'grub' && it.fate === 'in-pocket' && it.body);
+    if (!grub) return;
+    // tossed out through the mouth?
+    if (grub.body.position.y < 55) {
+      Composite.remove(sim.world, grub.body);
+      grub.body = null; grub.fate = 'taken';
+      sim.events.push({ type: 'grubOut' });
+      return;
+    }
+    // crawl toward the nearest paper thing and chew
+    let prey = null, pd = 1e9;
+    for (const it of g.items) {
+      if (it.fate !== 'in-pocket' || !it.body || it.mat !== 'paper') continue;
+      const dd = Math.hypot(it.body.position.x - grub.body.position.x, it.body.position.y - grub.body.position.y);
+      if (dd < pd) { pd = dd; prey = it; }
+    }
+    if (!prey) return;
+    if (pd > 28 && sim.dragIt !== grub) {
+      const dx = (prey.body.position.x - grub.body.position.x) / pd;
+      const dy = (prey.body.position.y - grub.body.position.y) / pd;
+      Body.setVelocity(grub.body, {
+        x: grub.body.velocity.x * 0.9 + dx * 0.5,
+        y: grub.body.velocity.y * 0.9 + dy * 0.3,
+      });
+      grub.chewT = 0;
+    } else if (sim.dragIt !== grub) {
+      grub.chewT = (grub.chewT || 0) + dt;
+      if (grub.chewT > 5) {
+        grub.chewT = 0;
+        if (prey.damaged) {
+          Composite.remove(sim.world, prey.body);
+          prey.body = null; prey.fate = 'lost'; prey.ruined = true;
+          sim.dayLost++;
+          if (prey.type === g.arc.keyType) g.flags[prey.type + 'Lost'] = true;
+          sim.events.push({ type: 'gone', label: prey.label, cause: 'grub' });
+        } else {
+          prey.damaged = true;
+          sim.events.push({ type: 'chewed', label: prey.label });
+        }
+      }
+    }
   }
 
   /* ---------------- main update ---------------- */
@@ -509,6 +722,7 @@
     sim.segT += dt;
     sim.ripple = Math.max(0, sim.ripple - dt * 2);
     sim.mend = Math.max(0, sim.mend - dt * 0.012); // the mend frays back, slowly
+    sim.gumPatch = Math.max(0, sim.gumPatch - dt);  // the gum dries and peels
 
     // advance schedule segments
     const seg = sim.segments[Math.min(sim.segIdx, sim.segments.length - 1)];
@@ -529,12 +743,12 @@
     sim.lightLevel = a.light * wx.light;
     sim.lightCol = a.blue ? 'blue' : 'warm';
 
-    // step jolts
+    // step jolts (an angry owner moves rougher)
     if (a.joltEvery > 0) {
       sim.joltTimer -= dt * motion.speed;
       if (sim.joltTimer <= 0) {
         sim.joltTimer = a.joltEvery * SH.rf(g.rng, 0.85, 1.15);
-        const J = a.jolt * motion.jolt;
+        const J = a.jolt * motion.jolt * (1 + Math.min(0.6, (g.mood || 0) * 0.08));
         for (const it of g.items) {
           const bodies = it.def.chain ? it.bodies : (it.body ? [it.body] : []);
           for (const b of bodies) {
@@ -569,9 +783,12 @@
       startHand(sim.hands[sim.hi++]);
     }
     updateGrip(dt);
+    updateExam(dt);
     updateHand(dt);
     updateHole(dt);
     updateMoth(dt);
+    updateCrisis(dt);
+    updateGrub(dt);
 
     Engine.update(sim.engine, Math.min(dt, 0.033) * 1000);
 

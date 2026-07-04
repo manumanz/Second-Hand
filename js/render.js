@@ -267,6 +267,17 @@
       ctx.arc(x - hr - 8 - i * 7, y - 4 + i * 5, 2.5, 0.4, 2.6);
       ctx.stroke();
     }
+    // a gum patch: pale, stubborn, temporary
+    if (sim.gumPatch > 0) {
+      const ga = Math.min(0.55, sim.gumPatch / 12);
+      ctx.fillStyle = 'rgba(214,200,178,' + ga.toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.ellipse(x, y, sim.holeR + 7, sim.holeR * 0.75 + 5, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(150,135,110,' + (ga * 0.8).toFixed(3) + ')';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
     // mended threads: taut cross-stitches drawn over the gap
     if (mend > 0.05) {
       ctx.strokeStyle = 'rgba(201,180,99,' + (0.15 + mend * 0.4).toFixed(3) + ')';
@@ -300,10 +311,16 @@
     ctx.translate(b.position.x, b.position.y);
     ctx.rotate(b.angle);
 
-    // silhouette
-    R.boilPath(ctx, it.geom.outline, it.seedv);
+    // silhouette (damaged things boil harder — water-stained, chewed at)
+    const amp = it.damaged ? 3.4 : undefined;
+    R.boilPath(ctx, it.geom.outline, it.seedv, amp);
     ctx.fillStyle = mat.fill;
     ctx.fill();
+    if (it.damaged) {
+      ctx.strokeStyle = 'rgba(110,75,45,.4)';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+    }
 
     // constant outline so shapes read even in the dark
     ctx.strokeStyle = 'rgba(216,201,168,' + (0.14 + e0 * 0.12).toFixed(3) + ')';
@@ -324,7 +341,7 @@
       grd.addColorStop(0.55, 'rgba(' + rimCol[0] + ',' + rimCol[1] + ',' + rimCol[2] + ',0)');
       ctx.strokeStyle = grd;
       ctx.lineWidth = 1.8;
-      R.boilPath(ctx, it.geom.outline, it.seedv);
+      R.boilPath(ctx, it.geom.outline, it.seedv, amp);
       ctx.stroke();
     }
 
@@ -385,6 +402,8 @@
   function drawHand() {
     const h = SH.Sim.hand;
     if (!h) return;
+    const thief = !!(h.ev && h.ev.thief);
+    const W2 = thief ? 0.62 : 1; // a thief's arm is thin, quick, wrong
     const [cr, cg, cb] = lightRGB();
     const wx = h.x, wy = h.y;
     if (wy < -50) return;
@@ -392,28 +411,36 @@
     ctx.save();
     // wrist/arm: tapered dark shape from above the mouth down to the palm
     ctx.beginPath();
-    const n = (SH.noise1(T * 2 + h.wiggleSeed) - 0.5) * 8;
-    ctx.moveTo(topX - 40, -60);
-    ctx.quadraticCurveTo(topX - 34 + n, wy * 0.4, wx - 26, wy - 8);
-    ctx.quadraticCurveTo(wx, wy + 6, wx + 26, wy - 8);
-    ctx.quadraticCurveTo(topX + 34 + n, wy * 0.4, topX + 40, -60);
+    const n = (SH.noise1(T * (thief ? 4 : 2) + h.wiggleSeed) - 0.5) * (thief ? 12 : 8);
+    ctx.moveTo(topX - 40 * W2, -60);
+    ctx.quadraticCurveTo(topX - 34 * W2 + n, wy * 0.4, wx - 26 * W2, wy - 8);
+    ctx.quadraticCurveTo(wx, wy + 6, wx + 26 * W2, wy - 8);
+    ctx.quadraticCurveTo(topX + 34 * W2 + n, wy * 0.4, topX + 40 * W2, -60);
     ctx.closePath();
     ctx.fillStyle = 'rgba(8,6,4,.96)';
     ctx.fill();
+    if (thief) { // a pale, unfamiliar cuff
+      ctx.strokeStyle = 'rgba(205,195,175,.3)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(topX - 34 * W2, -20);
+      ctx.quadraticCurveTo(topX, -8, topX + 34 * W2, -20);
+      ctx.stroke();
+    }
     // rim on the lit edge
     ctx.strokeStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',' + (0.25 * (SH.Sim.lightLevel || 0.5)).toFixed(3) + ')';
     ctx.lineWidth = 1.6;
     ctx.beginPath();
-    ctx.moveTo(topX - 40, -60);
-    ctx.quadraticCurveTo(topX - 34 + n, wy * 0.4, wx - 26, wy - 8);
+    ctx.moveTo(topX - 40 * W2, -60);
+    ctx.quadraticCurveTo(topX - 34 * W2 + n, wy * 0.4, wx - 26 * W2, wy - 8);
     ctx.stroke();
     // fingers
     for (let i = 0; i < 4; i++) {
       const fa = -0.55 + i * 0.36 + (SH.noise2(i * 9, T * 2.4 + h.wiggleSeed) - 0.5) * 0.22;
       const fl = 34 + (i === 1 || i === 2 ? 8 : 0);
-      const fx = wx + Math.sin(fa) * 14, fy = wy + 2;
+      const fx = wx + Math.sin(fa) * 14 * W2, fy = wy + 2;
       ctx.strokeStyle = 'rgba(8,6,4,.96)';
-      ctx.lineWidth = 9 - i * 0.4;
+      ctx.lineWidth = (9 - i * 0.4) * W2;
       ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(fx, fy);
@@ -531,6 +558,16 @@
     ctx.fillStyle = 'rgba(240,210,140,' + Math.min(0.9, a * 2.2).toFixed(3) + ')';
     ctx.beginPath(); ctx.arc(p.x, p.y, 2.6, 0, Math.PI * 2); ctx.fill();
 
+    // examination in progress: a slow ring closing around the cursor
+    if (sim.examCh) {
+      const prog = Math.min(1, sim.examCh.t / 1.1);
+      ctx.strokeStyle = 'rgba(201,180,99,.85)';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 27, -Math.PI / 2, -Math.PI / 2 + prog * Math.PI * 2);
+      ctx.stroke();
+    }
+
     // hover label: identify what the eye has found
     if (hov) {
       const seen = sim.g && sim.g.journal && sim.g.journal[hov.type];
@@ -560,6 +597,9 @@
 
     const v = SH.view;
     ctx.setTransform(v.s, 0, 0, v.s, v.ox, v.oy);
+    if (sim.crisis && sim.crisis.phase === 'active')
+      ctx.translate((Math.random() - 0.5) * (sim.crisis.type === 'wash' ? 10 : 5),
+                    (Math.random() - 0.5) * (sim.crisis.type === 'wash' ? 10 : 5));
 
     if (weaveCv) ctx.drawImage(weaveCv, 0, 0);
     drawPocket();

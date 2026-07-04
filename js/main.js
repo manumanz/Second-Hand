@@ -186,6 +186,15 @@
     setTimeout(() => { el.classList.remove('on'); setTimeout(() => el.remove(), 700); }, holdMs || 4200);
   }
 
+  /* the stranger's temper: losses make the week rougher and the story colder */
+  function bumpMood(n) {
+    if (!g) return;
+    const before = g.mood || 0;
+    g.mood = Math.min(8, before + n);
+    if (before < 3 && g.mood >= 3)
+      toast('they are starting to distrust this pocket. the steps feel harder already.', true, 6000);
+  }
+
   const ACTWORDS = {
     still: 'standing still', walk: 'walking', brisk: 'walking fast', run: 'running',
     sit: 'sitting down', bus: 'on the bus', pace: 'pacing, pacing',
@@ -200,13 +209,56 @@
           toast('night. they are still — this is when you can truly rearrange.', true, 6000);
         break;
       case 'spawn':
-        if (tut.need('spawn')) toast('something fell in. click it — once, gently — to examine it for the pocket book.', true, 6500);
+        if (tut.need('spawn')) toast('something fell in. press and hold on it, without moving, to examine it for the pocket book.', true, 6500);
         updateJrnBtn();
         break;
       case 'holeNear':
         if (tut.need('hole'))
           toast('the hole has ' + ev.label + '. drag it away, rub the hole to tighten its threads — or let it go.', true, 7000);
         else toast('the hole is working on ' + ev.label + '.');
+        break;
+      case 'examined':
+        examine(ev.it);
+        break;
+      case 'gummed':
+        toast('the gum seals the hole shut. it will dry and peel, but for now — peace.');
+        if (g.impact) g.impact.push('day ' + (dayIdx + 1) + ': you gummed the hole shut.');
+        break;
+      case 'flame': {
+        g.journalNight[ev.target.type] = true;
+        examine(ev.target);
+        toast('by lighter-light, ' + ev.target.label + ' gives up its secret.' +
+          (ev.left > 0 ? '' : ' the lighter is out of fuel.'));
+        break;
+      }
+      case 'crisisWarn':
+        toast(ev.crisis === 'wash'
+          ? 'wait. that sound. the coat is going in the WASH — save what matters! the corner is dry!'
+          : 'the coat is slipping off the chair — everything is about to spill out the mouth! HOLD ON TO THINGS!', true, 3500);
+        Audio2.noiseHit(0.12, 400, 0.4);
+        break;
+      case 'crisisStart':
+        $('actlabel').textContent = ev.crisis === 'wash' ? 'THE WASH.' : 'FALLING —';
+        break;
+      case 'crisisEnd':
+        toast(ev.crisis === 'wash'
+          ? 'the wash is over. paper remembers water. check the damage.'
+          : 'caught by a chair leg. the world rights itself.');
+        if (g.impact) g.impact.push('day ' + (dayIdx + 1) + ': the coat ' + (ev.crisis === 'wash' ? 'went through the wash.' : 'fell off a chair.'));
+        break;
+      case 'grubIn':
+        toast('something pale just wriggled in. it is heading for the paper. get it OUT.', true, 6000);
+        break;
+      case 'grubOut':
+        toast('the grub sails out through the mouth. good throw.');
+        if (g.impact) g.impact.push('day ' + (dayIdx + 1) + ': you threw the grub out.');
+        break;
+      case 'grubEaten':
+        toast('the hole ate the grub. the pocket approves of this one loss.');
+        if (g.impact) g.impact.push('day ' + (dayIdx + 1) + ': you fed the grub to the hole. fair.');
+        break;
+      case 'chewed':
+        toast('the grub is chewing ' + ev.label + '! it will be ruined next time.');
         break;
       case 'mothIn':
         toast('a lint-moth has blown in. it is worth a thread, if you can catch it.');
@@ -236,15 +288,29 @@
         }
         completeTask('mend');
         break;
-      case 'gone':
-        toast(ev.label + ' — gone. through the hole, into the world.');
+      case 'gone': {
+        const cause = ev.cause || 'hole';
+        const CT = {
+          hole: ' — gone. through the hole, into the world.',
+          wash: ' — ruined in the wash. paper never forgives water.',
+          fall: ' — spilled out of the mouth, onto some floor somewhere.',
+          grub: ' — eaten. the grub finished it.',
+        };
+        toast(ev.label + (CT[cause] || CT.hole));
         if (g && g.impact) {
           const key = ev.label === SH.ITEM_DEFS[g.arc.keyType].label;
-          g.impact.push('day ' + (dayIdx + 1) + ': the hole took ' + ev.label + '.' + (key ? ' the story bent hard.' : ''));
+          const CI = { hole: 'the hole took ', wash: 'the wash ruined ', fall: 'the fall spilled ', grub: 'the grub ate ' };
+          g.impact.push('day ' + (dayIdx + 1) + ': ' + (CI[cause] || CI.hole) + ev.label + '.' + (key ? ' the story bent hard.' : ''));
+          bumpMood(key ? 3 : 1);
         }
         break;
+      }
       case 'handStart':
-        if (tut.need('hand'))
+        if (ev.ev.thief) {
+          toast('that hand — that is NOT their hand. it wants the best thing in here. hide it, or feed the thief a coin!', true, 5000);
+          Audio2.noiseHit(0.09, 1200, 0.3);
+        }
+        else if (tut.need('hand'))
           toast('the fingers. they are hunting something — help them find it, or hide it. both change the story.', true, 7000);
         else if (ev.ev.minor) toast('the fingers, counting bus money.');
         else if (ev.ev.action === 'give') toast('the fingers bring something down.');
@@ -259,6 +325,23 @@
         break;
       case 'handEnd': {
         if (demo.active) { demo.flags.handResult = ev.result; break; }
+        if (ev.ev.thief) {
+          if (ev.result === 'took') {
+            if (ev.label === 'a coin') {
+              toast('the thief got a coin and fled. it wanted much more. well played.');
+              if (g.impact) g.impact.push('day ' + (dayIdx + 1) + ': a pickpocket left with only a coin. your decoy.');
+              bumpMood(1);
+            } else {
+              toast('STOLEN — ' + ev.label + ' is gone with a stranger. the pocket burns.');
+              if (g.impact) g.impact.push('day ' + (dayIdx + 1) + ': a pickpocket stole ' + ev.label + '. the story bent hard.');
+              bumpMood(3);
+            }
+          } else {
+            toast('the thief came up with lint and fled. nothing lost.');
+            if (g.impact) g.impact.push('day ' + (dayIdx + 1) + ': a pickpocket tried, and failed. your doing.');
+          }
+          break;
+        }
         const m = ev.ev.minor;
         if (ev.result === 'took') {
           toast(m ? 'bus money found. the day moves on.' : 'they found ' + ev.label + '. it goes up into the light.');
@@ -270,9 +353,12 @@
           if (m) toast('no coin to be found. a small sigh from above.');
           else if (buried) toast('the fingers searched and searched. ' + ev.label + ' stayed buried in the dark corner. your doing.');
           else toast('they came up empty. that changes things.');
-          if (!m && g.impact) g.impact.push('day ' + (dayIdx + 1) + ': ' +
-            (buried ? 'you hid ' + ev.label + ' from the fingers. the story bent.'
-                    : 'the fingers came up empty. the story bent.'));
+          if (!m && g.impact) {
+            g.impact.push('day ' + (dayIdx + 1) + ': ' +
+              (buried ? 'you hid ' + ev.label + ' from the fingers. the story bent.'
+                      : 'the fingers came up empty. the story bent.'));
+            bumpMood(2); // they wanted it, and it wasn't there
+          }
         }
         else if (ev.result === 'returned') toast(ev.label + ' — used, and put back.');
         else if (ev.result === 'peeked') toast(ev.label + ' — held, considered, put back.');
@@ -419,7 +505,8 @@
         let extra = '';
         if (g.journalNight[it.type] && it.def.night) extra = '<br><span class="jn">' + it.def.night + '</span>';
         else if (it.def.night && !gone) extra = '<br><span class="jnh">(more at night. things confess in the dark.)</span>';
-        html += '<div class="jentry"><b>' + it.label + '</b>' + (gone ? ' <i>(no longer with us)</i>' : '') +
+        const dmg = it.damaged && it.fate === 'in-pocket' ? ' <i>(damaged — one more insult ruins it)</i>' : '';
+        html += '<div class="jentry"><b>' + it.label + '</b>' + (gone ? ' <i>(no longer with us)</i>' : dmg) +
           ' — ' + it.def.desc + '<br><i>' + it.def.read + '</i>' + extra + '</div>';
       } else if (it.fate === 'in-pocket') unexamined++;
     }
@@ -548,7 +635,7 @@
       done() { return (SH.Sim.nudgeCount || 0) - demo.base > 20; },
     },
     {
-      text: 'good. now click the coin — one short, gentle tap — to examine it.',
+      text: 'good. now press and hold on the coin — hold still — until the gold ring closes. that is an examination.',
       done() { return !!g.journal.coin; },
     },
     {
@@ -675,7 +762,20 @@
     g.threads = 0;
     g.tasks = null;
     g.lastDayAllDone = false;
+    g.mood = 0;
     g.inherit = inherit || null;
+    // the week's dangers, planned in secret
+    const pr = SH.mulberry32(seed ^ 0x7e57);
+    const days = SH.shuffle(pr, [1, 2, 3, 4, 5, 6]);
+    g.plan = {
+      thiefDays: days.slice(0, SH.ri(pr, 1, 2)),
+      crisisDay: SH.ri(pr, 2, 5),
+      crisisType: pr() < 0.55 ? 'wash' : 'fall',
+      grubDay: (() => {
+        for (let i = 2; i < 7; i++) if (g.weather[i].id === 'rain') return i;
+        return SH.ri(pr, 2, 6);
+      })(),
+    };
     narrate.mendDay = -1; narrate.hideHinted = false;
     renderTasks();
     SH.Sim.init(g);
@@ -700,6 +800,17 @@
       for (const t of g.inherit.types.slice(0, 6))
         resolved.drops.push({ f: SH.rf(g.rng, .05, .5), type: t });
       resolved.drops.sort((a, b) => a.f - b.f);
+    }
+    // today's secret dangers
+    resolved.extra = {};
+    if (g.plan.crisisDay === dayIdx) {
+      resolved.extra.crisisF = SH.rf(g.rng, 0.3, 0.7);
+      resolved.extra.crisisType = g.plan.crisisType;
+    }
+    if (g.plan.grubDay === dayIdx) resolved.extra.grub = true;
+    if (g.plan.thiefDays.includes(dayIdx)) {
+      resolved.hands.push({ f: SH.rf(g.rng, 0.25, 0.8), thief: true, action: 'take' });
+      resolved.hands.sort((a, b) => a.f - b.f);
     }
     if (g.lastDayAllDone)
       resolved.lines.push('(you kept busy yesterday. the pocket remembers: ' + g.threads + ' threads now.)');
@@ -731,6 +842,7 @@
       }
     }
     g.lastDayAllDone = !!(g.tasks && g.tasks.every(t => t.done));
+    g.mood = Math.max(0, (g.mood || 0) - 1); // sleep softens most tempers
     dayIdx++;
     if (dayIdx < 7) { startDayCard(); return; }
     // seven days done → first, the reading of the stranger
@@ -815,7 +927,8 @@
     const FATE = {
       'in-pocket': ['passed on with the coat', 'fate-kept'],
       'taken': ['taken by the fingers', 'fate-taken'],
-      'lost': ['lost to the hole', 'fate-lost'],
+      'lost': ['lost along the way', 'fate-lost'],
+      'used': ['used up in service of the pocket', 'fate-taken'],
     };
     for (const row of SH.buildFates(g)) {
       const f = FATE[row.fate] || ['—', ''];
@@ -840,14 +953,8 @@
     SH.Sim.pointerMove(w.x, w.y, true);
     SH.Sim.gripAt(w.x, w.y);
   });
-  window.addEventListener('pointerup', e => {
-    // a short, still press is an examination, not a nudge
-    if (pdown && downAt && (state === 'day' || state === 'demo') &&
-        performance.now() - downAt.t < 320 &&
-        Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 9) {
-      const w = SH.Render.toWorld(e.clientX, e.clientY);
-      examine(SH.Sim.itemAt(w.x, w.y));
-    }
+  window.addEventListener('pointerup', () => {
+    // examining is a held press now — handled by the sim's exam channel
     pdown = false; downAt = null;
     SH.Sim.pointer.down = false;
     SH.Sim.releaseGrip();

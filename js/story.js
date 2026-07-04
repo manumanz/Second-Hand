@@ -74,6 +74,7 @@
     ringbox:    ['a small empty box shaped like a question.'],
     note:       ['a note that says “milk, bulbs, call m.” all three, they decide, still apply.'],
     twine:      ['a piece of green string. it will hold something up. it always does.'],
+    grub:       ['a small dried grub. the new owner decides not to ask.'],
     ring:       ['a ring. see below.'],
     tag:        ['a collar tag. see below.'],
     letter:     ['a letter. see below.'],
@@ -566,8 +567,16 @@
     if (typeof d === 'function') d = d(g);
     const lines = (typeof d.lines === 'function' ? d.lines(g) : d.lines || []).slice();
     if (n > 0 && g.lostYesterday > 0)
-      lines.push('(the hole took ' + (g.lostYesterday === 1 ? 'something' : g.lostYesterday + ' things') +
+      lines.push('(the pocket lost ' + (g.lostYesterday === 1 ? 'something' : g.lostYesterday + ' things') +
                  ' yesterday. i felt ' + (g.lostYesterday === 1 ? 'it' : 'each one') + ' go.)');
+    // the temper: a pocket that loses things gets checked, shaken, distrusted
+    const mood = g.mood || 0;
+    if (n > 0 && mood >= 5)
+      lines.push('(they turned me inside out over the sink last night, and said a word i will not repeat. i have never felt so empty and so seen.)');
+    else if (n > 0 && mood >= 3)
+      lines.push('(they keep counting what is in me. twice this morning already. trust, once dropped, picks up dirt.)');
+    else if (n > 0 && mood >= 1)
+      lines.push('(they noticed something was missing. the hands came down slower today, checking.)');
     const drops = (d.drops || []).slice();
     const r = g.rng;
     const nCoins = ri(r, 0, 2);
@@ -615,6 +624,13 @@
                   'some pockets are doors. i never said i wasn’t.'] }
       : null;
 
+    const moodCard = (g.mood || 0) >= 4
+      ? { head: 'A NOTE ON TRUST',
+          lines: ['this pocket lost too much, this week. they noticed. of course they noticed.',
+                  'part of why the coat is going away is me. i can carry that too.',
+                  'look after whatever pocket you get next. they keep the score, even when they love you.'] }
+      : null;
+
     if (shape === 0) {
       // the classic: the coat leaves, someone new arrives
       cards.push({ head: 'SUNDAY, LATER',
@@ -626,6 +642,7 @@
                 'the first thing everyone does with a second-hand coat', 'is reach into the pockets.'] });
       cards.push(foundCard('WHAT THE POCKET GAVE THEM'));
       if (holeCard) cards.push(holeCard);
+      if (moodCard) cards.push(moodCard);
       cards.push({ head: 'AS FOR THEM', lines: g.arc.outcome(g) });
     } else if (shape === 1) {
       // verdict first: how it ended, then what was left behind
@@ -634,6 +651,7 @@
         lines: ['a paper bag. a van. a rail of sleeping coats.',
                 'a week is a long time to hold somebody’s life.', 'i was glad to do it.'] });
       if (holeCard) cards.push(holeCard);
+      if (moodCard) cards.push(moodCard);
       cards.push(foundCard('LEFT BEHIND, PASSED ALONG'));
       cards.push({ head: 'THE LAST POCKET FACT',
         lines: ['the coat is chosen by ' + g.newOwner + '.',
@@ -646,6 +664,7 @@
                 'the first thing anyone does with a second-hand coat is reach into the pockets.'] });
       cards.push(foundCard('WHAT THEIR HAND FINDS'));
       if (holeCard) cards.push(holeCard);
+      if (moodCard) cards.push(moodCard);
       cards.push({ head: 'WORD TRAVELS', lines: g.arc.outcome(g) });
       cards.push({ head: 'AND THE POCKET',
         lines: ['new lint. new weather. new weight.', 'i begin again. i always begin again.'] });
