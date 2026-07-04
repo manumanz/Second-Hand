@@ -92,6 +92,44 @@
       src.connect(f).connect(g).connect(this.master);
       src.start(t);
     },
+    /* title-screen noir: walking bass, a distant horn, vinyl dust */
+    noirInt: null, noirN: 0,
+    startNoir() {
+      this.init();
+      if (this.noirInt || !this.ctx) return;
+      this.noirN = 0;
+      this.noirInt = setInterval(() => { if (!this.muted) this.noirStep(); }, 700);
+    },
+    stopNoir() { if (this.noirInt) { clearInterval(this.noirInt); this.noirInt = null; } },
+    noirStep() {
+      const t = this.ctx.currentTime, n = this.noirN++;
+      const bass = [110, 98, 130.81, 110, 146.83, 123.47, 110, 87.31];
+      if (n % 2 === 0) {
+        const o = this.ctx.createOscillator(); o.type = 'sine';
+        o.frequency.value = bass[(n / 2 | 0) % bass.length];
+        const g2 = this.ctx.createGain();
+        g2.gain.setValueAtTime(0.1, t);
+        g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.95);
+        const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420;
+        o.connect(g2); g2.connect(lp); lp.connect(this.master);
+        o.start(t); o.stop(t + 1);
+      }
+      if (Math.random() < 0.11) {
+        const o = this.ctx.createOscillator(); o.type = 'triangle';
+        o.frequency.value = [233.08, 261.63, 311.13, 349.23][Math.random() * 4 | 0];
+        const v = this.ctx.createOscillator(); v.frequency.value = 5.3;
+        const vg = this.ctx.createGain(); vg.gain.value = 3.5;
+        v.connect(vg); vg.connect(o.frequency);
+        const g2 = this.ctx.createGain();
+        g2.gain.setValueAtTime(0, t);
+        g2.gain.linearRampToValueAtTime(0.015, t + 0.55);
+        g2.gain.linearRampToValueAtTime(0, t + 2.4);
+        const lp = this.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
+        o.connect(g2); g2.connect(lp); lp.connect(this.master);
+        o.start(t); o.stop(t + 2.5); v.start(t); v.stop(t + 2.5);
+      }
+      if (Math.random() < 0.5) this.noiseHit(0.004, 3200, 0.02);
+    },
     handle(ev) {
       if (ev.type === 'thump') this.noiseHit(0.16 * ev.mag, 240, 0.07);
       else if (ev.type === 'step') this.noiseHit(0.05 * ev.mag, 130, 0.1);
@@ -136,7 +174,8 @@
           toast('night. they are still — this is when you can truly rearrange.', true, 6000);
         break;
       case 'spawn':
-        if (tut.need('spawn')) toast('something fell in. everything that falls in tells you who they are.', true, 6000);
+        if (tut.need('spawn')) toast('something fell in. click it — once, gently — to examine it for the pocket book.', true, 6500);
+        updateJrnBtn();
         break;
       case 'holeNear':
         if (tut.need('hole'))
@@ -168,6 +207,61 @@
         break;
       }
     }
+  }
+
+  /* ---------------- examining + the pocket book ---------------- */
+  let examTimer = null;
+  function examine(it) {
+    if (!it || !it.def.desc) return;
+    const fresh = !g.journal[it.type];
+    g.journal[it.type] = dayIdx + 1;
+    $('exam').querySelector('.xname').textContent = it.label;
+    $('exam').querySelector('.xdesc').textContent = it.def.desc;
+    $('exam').querySelector('.xread').textContent = it.def.read;
+    $('exam').classList.add('on');
+    clearTimeout(examTimer);
+    examTimer = setTimeout(() => $('exam').classList.remove('on'), 7000);
+    if (fresh) {
+      toast('logged in the pocket book: ' + it.label + '.');
+      Audio2.blip(660, 0.25, 0.03, 'triangle');
+    }
+    updateJrnBtn();
+  }
+
+  function updateJrnBtn() {
+    if (!g) return;
+    const types = {}; let unread = 0;
+    for (const it of g.items)
+      if (it.fate === 'in-pocket' && !types[it.type]) {
+        types[it.type] = 1;
+        if (!g.journal[it.type]) unread++;
+      }
+    $('jrnbtn').textContent = 'pocket book' + (unread ? ' · ' + unread + ' unread' : '');
+  }
+
+  function buildJournal() {
+    let html = '<h3>the stranger</h3>';
+    html += '<div class="jentry">the walk: <i>' + g.motion.label + '</i></div>';
+    const workKnown = g.occ.filler.some(t => g.journal[t]) || dayIdx >= 3;
+    html += '<div class="jentry">the work: <i>' + (workKnown ? g.occ.line : 'unknown. examine what the job leaves behind.') + '</i></div>';
+    const key = g.arc.keyType;
+    if (g.journal[key]) html += '<div class="jentry">the matter at hand: <i>' + SH.ITEM_DEFS[key].read + '</i></div>';
+    else html += '<div class="jentry junk">the matter at hand: not yet understood.</div>';
+    html += '<h3>evidence</h3>';
+    const seenT = {}; let unexamined = 0, any = false;
+    for (const it of g.items) {
+      if (seenT[it.type]) continue;
+      seenT[it.type] = 1;
+      if (g.journal[it.type]) {
+        any = true;
+        const gone = it.fate !== 'in-pocket' && !g.items.some(o => o.type === it.type && o.fate === 'in-pocket');
+        html += '<div class="jentry"><b>' + it.label + '</b>' + (gone ? ' <i>(no longer with us)</i>' : '') +
+          ' — ' + it.def.desc + '<br><i>' + it.def.read + '</i></div>';
+      } else if (it.fate === 'in-pocket') unexamined++;
+    }
+    if (unexamined) html += '<div class="jentry junk">' + unexamined + ' thing' + (unexamined > 1 ? 's' : '') + ' still unexamined, down in the dark.</div>';
+    if (!any && !unexamined) html += '<div class="jentry junk">nothing yet. the pocket is young.</div>';
+    $('jwrap').innerHTML = html;
   }
 
   /* first-play tutorial: each hint fires once, remembered across visits */
@@ -217,6 +311,7 @@
   /* ---------------- game flow ---------------- */
   function newGame(seed) {
     g = SH.generateStranger(seed);
+    g.journal = {};
     SH.Sim.init(g);
     SH.Render.makeTextures(g);
     $('seedtag').textContent = 'stranger no. ' + g.seedId;
@@ -282,7 +377,7 @@
   }
 
   /* ---------------- input ---------------- */
-  let pdown = false;
+  let pdown = false, downAt = null;
   cv.addEventListener('pointermove', e => {
     const w = SH.Render.toWorld(e.clientX, e.clientY);
     SH.Sim.pointer.worldOK = true;
@@ -290,11 +385,19 @@
   });
   cv.addEventListener('pointerdown', e => {
     pdown = true;
+    downAt = { x: e.clientX, y: e.clientY, t: performance.now() };
     const w = SH.Render.toWorld(e.clientX, e.clientY);
     SH.Sim.pointerMove(w.x, w.y, true);
   });
-  window.addEventListener('pointerup', () => {
-    pdown = false;
+  window.addEventListener('pointerup', e => {
+    // a short, still press is an examination, not a nudge
+    if (pdown && downAt && state === 'day' &&
+        performance.now() - downAt.t < 320 &&
+        Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 9) {
+      const w = SH.Render.toWorld(e.clientX, e.clientY);
+      examine(SH.Sim.itemAt(w.x, w.y));
+    }
+    pdown = false; downAt = null;
     SH.Sim.pointer.down = false;
   });
   cv.addEventListener('pointerleave', () => { SH.Sim.pointer.worldOK = false; });
@@ -323,6 +426,7 @@
 
   $('beginbtn').addEventListener('click', () => {
     Audio2.init();
+    Audio2.stopNoir();
     const typed = $('seedin').value.trim();
     let seed = rolledSeed;
     if (typed) {
@@ -339,6 +443,20 @@
 
   $('howtobtn').addEventListener('click', () => $('howto').classList.remove('hidden'));
   $('howtoclose').addEventListener('click', () => $('howto').classList.add('hidden'));
+
+  $('jrnbtn').addEventListener('click', () => {
+    if (state !== 'day') return;
+    buildJournal();
+    $('journal').classList.remove('hidden');
+    state = 'journal'; // the world holds its breath while you read
+  });
+  $('jrnclose').addEventListener('click', () => {
+    $('journal').classList.add('hidden');
+    if (state === 'journal') state = 'day';
+  });
+
+  // the title hums like the start of a case
+  $('title').addEventListener('pointerdown', () => Audio2.startNoir(), { once: true });
 
   /* ---------------- loop ---------------- */
   function loop(now) {

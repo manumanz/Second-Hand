@@ -330,6 +330,21 @@
     }
   }
 
+  /* find the item under/near a world point (for hover labels + examining) */
+  sim.itemAt = function (wx, wy) {
+    if (!sim.g) return null;
+    let best = null, bd = 52;
+    for (const it of sim.g.items) {
+      if (it.fate !== 'in-pocket') continue;
+      const bodies = it.def.chain ? it.bodies : (it.body ? [it.body] : []);
+      for (const b of bodies) {
+        const d = Math.hypot(b.position.x - wx, b.position.y - wy);
+        if (d < bd) { bd = d; best = it; }
+      }
+    }
+    return best;
+  };
+
   /* ---------------- nudge input ---------------- */
   let lastP = null;
   sim.pointerMove = function (wx, wy, down) {

@@ -447,14 +447,37 @@
     const p = sim.pointer;
     if (!p.worldOK) return;
     const calm = 1 - Math.min(1, sim.act ? sim.act.intensity : 0);
-    const a = (p.down ? 0.16 : 0.07) * (0.3 + calm * 0.7);
-    ctx.strokeStyle = 'rgba(216,201,168,' + a.toFixed(3) + ')';
-    ctx.lineWidth = 1;
+    const hov = sim.itemAt(p.x, p.y);
+
+    // the ring: bright enough to always find, brighter still when you can act
+    const a = (p.down ? 0.55 : 0.3) * (0.55 + calm * 0.45);
+    ctx.strokeStyle = 'rgba(232,196,120,' + a.toFixed(3) + ')';
+    ctx.lineWidth = 1.4;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 22 + sim.ripple * 26, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, (hov ? 15 : 20) + sim.ripple * 26, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.fillStyle = 'rgba(216,201,168,' + (a * 1.6).toFixed(3) + ')';
-    ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI * 2); ctx.fill();
+    // dark halo so it reads on lit fabric too
+    ctx.strokeStyle = 'rgba(0,0,0,' + (a * 0.6).toFixed(3) + ')';
+    ctx.lineWidth = 3.2;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, (hov ? 15 : 20) + sim.ripple * 26 + 2.2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(240,210,140,' + Math.min(0.9, a * 2.2).toFixed(3) + ')';
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2.6, 0, Math.PI * 2); ctx.fill();
+
+    // hover label: identify what the eye has found
+    if (hov) {
+      const seen = sim.g && sim.g.journal && sim.g.journal[hov.type];
+      const txt = hov.label + (seen ? '' : '  ·  unexamined');
+      ctx.font = 'italic 17px Georgia, serif';
+      const tw = ctx.measureText(txt).width;
+      let tx = p.x + 22, ty = p.y - 18;
+      if (tx + tw > 880) tx = p.x - 22 - tw;
+      ctx.fillStyle = 'rgba(5,3,2,.72)';
+      ctx.fillRect(tx - 7, ty - 16, tw + 14, 24);
+      ctx.fillStyle = seen ? 'rgba(216,201,168,.92)' : 'rgba(201,180,99,.95)';
+      ctx.fillText(txt, tx, ty);
+    }
   }
 
   function hexToRgb(hx) {

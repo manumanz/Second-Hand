@@ -324,6 +324,37 @@
     make: null, geom: () => ({}), detail() {},
   });
 
+  /* ---------- lore: what a thing is, and what it betrays ---------- */
+  const LORE = {
+    coin:       { desc: 'cold, round, honest. the currency of small errands.', read: 'they pay in coins. cash people are either careful or broke — often both.' },
+    key:        { desc: 'brass, worn smooth at the shoulder.', read: 'keys only live in pockets while they still open something. this one still does. watch it.' },
+    lighter:    { desc: 'cheap plastic, half fuel, thumb-polished.', read: 'a fire they keep choosing to carry. note how often the fingers visit it.' },
+    letter:     { desc: 'folded four times. the creases are soft — it has been carried for weeks.', read: 'unsent words, addressed in very careful handwriting. the heaviest kind of paper there is.' },
+    note:       { desc: 'a scrap, folded once, pressed flat.', read: 'lists are prayers for order.' },
+    receipt:    { desc: 'thermal paper, already fading.', read: 'one coffee. always one. nobody buys one coffee who has somebody waiting.' },
+    ring:       { desc: 'gold. a size that is not theirs.', read: 'not worn — carried. a question rehearsing itself. keep this one where you can see it.' },
+    ringbox:    { desc: 'velvet, hinged, lighter than it looks.', read: 'boxes like this hold exactly one future.' },
+    ticket:     { desc: 'one way. 06:12, friday. checked and rechecked.', read: 'single tickets are decisions; returns are habits. this is a decision.' },
+    busticket:  { desc: 'creased, validated twice.', read: 'the same route, over and over. somewhere in this city is pulling them.' },
+    pick:       { desc: 'celluloid, worn to matte at the tip.', read: 'worn picks belong to players who mean it. there are ten thousand songs in this one.' },
+    photo:      { desc: 'two people on a wall, squinting at an old sun.', read: 'carried photographs are unfinished business. framed ones are finished. this one rides in a pocket.' },
+    gum:        { desc: 'mint. the serious, hospital-grade kind.', read: 'gum arrives in pockets when something else is being given up.' },
+    cigpack:    { desc: 'crumpled — deliberately, by a whole fist.', read: 'crushed but not thrown away. kept. a trophy or a temptation; same shape, either way.' },
+    treat:      { desc: 'fish-shaped. pungent. slightly hairy now.', read: 'somebody small and whiskered has opinions about this person.' },
+    tag:        { desc: 'engraved brass. a name, and a phone number.', read: 'the number is not theirs. the cat, currently, is. this tag is a verdict waiting to be read out.' },
+    stamps:     { desc: 'two, bought singly, kept flat.', read: 'you don’t buy stamps unless a letter is nearly brave enough.' },
+    napkin:     { desc: 'folded twice. ink pressed hard enough to feel.', read: 'phone numbers on napkins are doors left ajar.' },
+    bottlecap:  { desc: 'bent once, kept anyway.', read: 'souvenirs of good nights outlast the nights.' },
+    seedpacket: { desc: 'marigolds. half the packet gone.', read: 'gardeners think in seasons. patient people. things they plant, they intend to see again.' },
+    sachet:     { desc: 'brown sugar, slightly fused at one corner.', read: 'borrowed sweetness from a counter they stand behind all day.' },
+    eraser:     { desc: 'worn perfectly round.', read: 'someone here still fixes mistakes by hand.' },
+    usb:        { desc: 'eight gigabytes of maybe.', read: 'it holds everything or nothing. they never check either.' },
+    pencap:     { desc: 'chewed. thoughtfully.', read: 'thinkers chew. the pen itself is long gone; the thinking continues.' },
+    twine:      { desc: 'green, garden-grade, a hand’s length.', read: 'people who carry string believe things can be held together.' },
+    earbuds:    { desc: 'self-tangling, as all cords are.', read: 'the knots are a diary of every restless hour.' },
+  };
+  for (const t in LORE) if (DEFS[t]) Object.assign(DEFS[t], LORE[t]);
+
   /* ---------- factory ---------- */
   let nextId = 1;
   SH.makeItem = function (world, type, x, y, rng, opts) {

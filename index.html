@@ -56,12 +56,30 @@
     opacity:0;transition:opacity .6s;max-width:480px;line-height:1.5;}
   .toast.on{opacity:.95;}
   .toast.hint{color:#c9b463;}
-  #ffbtn,#mutebtn{position:absolute;bottom:16px;pointer-events:auto;background:none;border:none;
+  #ffbtn,#mutebtn,#jrnbtn{position:absolute;bottom:16px;pointer-events:auto;background:none;border:none;
     color:rgba(216,201,168,.35);font-family:inherit;font-size:11px;letter-spacing:.25em;
     text-transform:uppercase;cursor:pointer;padding:8px 12px;}
   #ffbtn{right:16px;} #mutebtn{left:16px;}
-  #ffbtn:hover,#mutebtn:hover{color:var(--ink);}
+  #jrnbtn{top:14px;right:16px;bottom:auto;color:rgba(216,201,168,.55);border:1px solid rgba(216,201,168,.18);}
+  #ffbtn:hover,#mutebtn:hover,#jrnbtn:hover{color:var(--ink);}
   #ffbtn.on{color:var(--ink);}
+
+  #exam{position:absolute;right:22px;top:90px;width:250px;pointer-events:none;
+    background:rgba(10,7,4,.88);border:1px solid #3a3020;padding:16px 18px;
+    opacity:0;transform:translateX(10px);transition:all .45s ease;}
+  #exam.on{opacity:1;transform:none;}
+  #exam .xname{font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:#c9b463;margin-bottom:10px;}
+  #exam .xdesc{font-size:13px;line-height:1.65;color:var(--ink);margin-bottom:10px;}
+  #exam .xread{font-size:13px;line-height:1.65;font-style:italic;color:var(--dim);}
+
+  #journal .jwrap{max-width:560px;width:92%;max-height:74vh;overflow-y:auto;text-align:left;padding:0 14px;}
+  #journal .jwrap::-webkit-scrollbar{width:3px;} #journal .jwrap::-webkit-scrollbar-thumb{background:#4a3d28;}
+  #journal h3{font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:#c9b463;
+    font-weight:normal;margin:22px 0 10px;}
+  #journal .jentry{margin-bottom:13px;font-size:14px;line-height:1.6;}
+  #journal .jentry b{color:var(--ink);font-weight:normal;letter-spacing:.06em;}
+  #journal .jentry i{color:var(--dim);}
+  #journal .junk{color:#5a4d38;font-style:italic;font-size:13px;}
   #seedtag{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
     font-size:10px;letter-spacing:.3em;color:rgba(216,201,168,.18);}
 
@@ -80,7 +98,19 @@
   <div id="toasts"></div>
   <button id="mutebtn">sound on</button>
   <button id="ffbtn" title="hold to hurry the day along">&#187; hurry</button>
+  <button id="jrnbtn">pocket book</button>
+  <div id="exam">
+    <div class="xname"></div>
+    <div class="xdesc"></div>
+    <div class="xread"></div>
+  </div>
   <div id="seedtag"></div>
+</div>
+
+<div id="journal" class="overlay hidden">
+  <div class="kicker">the pocket book</div>
+  <div class="jwrap" id="jwrap"></div>
+  <div style="margin-top:24px"><button class="plain" id="jrnclose">back to the dark</button></div>
 </div>
 
 <div id="title" class="overlay">
@@ -99,6 +129,7 @@
     <p class="on">you are the inside of a stranger's coat pocket, for seven days. you never see them &mdash; the swaying is them walking; the crush is them sitting; the stillness is night.</p>
     <p class="on"><b>watch what falls in.</b> every object is a clue about who they are &mdash; and one of them will turn out to matter more than the rest.</p>
     <p class="on"><b>drag to nudge things.</b> you are weak while they move and strong while they rest. wait for sitting, or night.</p>
+    <p class="on"><b>click a thing to examine it.</b> every find is logged in the <b>pocket book</b> (top right) — what it is, and what it betrays about them. work the case.</p>
     <p class="on"><b>the hole</b> (lower right seam) eats anything small that rests on it &mdash; and it grows every day. pull things to safety, or deliberately feed it something they'd be better off losing. <b>rub across the hole</b> to pull its threads tighter for a while.</p>
     <p class="on"><b>the fingers</b> dive in at story moments, hunting a specific object. leave it findable and the story goes one way. hide it in a corner &mdash; or down the hole &mdash; and the story goes another. both are allowed.</p>
     <p class="on">at week's end the coat is donated. everything you kept becomes someone else's beginning.</p>
