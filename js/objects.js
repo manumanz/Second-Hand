@@ -353,7 +353,38 @@
     twine:      { desc: 'green, garden-grade, a hand’s length.', read: 'people who carry string believe things can be held together.' },
     earbuds:    { desc: 'self-tangling, as all cords are.', read: 'the knots are a diary of every restless hour.' },
   };
+  /* what the same things confess under moonlight — a second layer,
+     only readable when the coat hangs and the light turns blue */
+  const NIGHT = {
+    coin:       'tails up. they would call that unlucky, and pocket it anyway.',
+    key:        'it stays warm long after the hand leaves. doors miss people too.',
+    lighter:    'shaken, it sounds nearly empty. so does the argument for keeping it.',
+    letter:     'held to the moon, one line shows through: “i should have said this years ago.”',
+    note:       'on the back, fainter: a name, crossed out twice.',
+    receipt:    'on the back, a doodle — two stick figures under one umbrella.',
+    ring:       'inside the band, an engraving already: a date eight months from now.',
+    ringbox:    'the velvet is worn at one corner. opened and shut a hundred nervous times.',
+    ticket:     'the fold runs exactly through the word “depart”. everything folds there eventually.',
+    busticket:  'route 9. the last stop is the sea.',
+    pick:       'tooth-marks along the blunt edge. stage fright has a flavour.',
+    photo:      'the moon finds a third shadow at the edge. someone held the camera. someone always does.',
+    gum:        'the packet is nearly finished. counting pieces is how they count days.',
+    cigpack:    'one cigarette left inside. kept like a loaded question.',
+    treat:      'crumbs in my seams say this is not the first pocketful. the cat has a routine now.',
+    tag:        'moonlight through the punched hole throws a little zero on the fabric. a number that answers.',
+    stamps:     'second class. they are not in a hurry — they are in a fear.',
+    napkin:     'under the number, pressed hard then abandoned: half the first letter of a name.',
+    bottlecap:  'the underside says WINNER. some competitions are private.',
+    seedpacket: '“sow by late spring,” it says. they are already late. they will plant anyway.',
+    sachet:     'not stolen — counted. exactly one a day. a small, permitted theft.',
+    eraser:     'it smells of a classroom two decades closed.',
+    usb:        'a label, mostly peeled off: “…final_FINAL_v3”. some archaeology is best left.',
+    pencap:     'the clip is snapped. fidgeted past saving.',
+    twine:      'knotted at one end to remember something now forgotten. the knot stays dutiful.',
+    earbuds:    'at night the tangle loosens by itself, a little. even knots rest.',
+  };
   for (const t in LORE) if (DEFS[t]) Object.assign(DEFS[t], LORE[t]);
+  for (const t in NIGHT) if (DEFS[t]) DEFS[t].night = NIGHT[t];
 
   /* ---------- factory ---------- */
   let nextId = 1;

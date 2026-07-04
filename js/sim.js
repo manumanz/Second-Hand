@@ -377,6 +377,7 @@
               const vm = Math.hypot(vx, vy);
               if (vm > 7) { vx *= 7 / vm; vy *= 7 / vm; }
               Body.setVelocity(b, { x: vx, y: vy });
+              sim.nudgeCount = (sim.nudgeCount || 0) + 1;
             }
           }
         }

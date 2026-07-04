@@ -71,6 +71,20 @@
   #exam .xname{font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:#c9b463;margin-bottom:10px;}
   #exam .xdesc{font-size:13px;line-height:1.65;color:var(--ink);margin-bottom:10px;}
   #exam .xread{font-size:13px;line-height:1.65;font-style:italic;color:var(--dim);}
+  #exam .xnight{font-size:13px;line-height:1.65;font-style:italic;color:#8fa3d8;margin-top:10px;}
+  #exam .xnight.hint{color:#4d5470;}
+  .jn{color:#8fa3d8;}
+  .jnh{color:#4d5470;font-style:italic;}
+
+  #tutbar{position:absolute;top:70px;left:50%;transform:translateX(-50%);
+    max-width:520px;width:88%;text-align:center;pointer-events:none;
+    background:rgba(8,6,3,.82);border:1px solid #4a3d28;padding:14px 22px;
+    font-size:15px;font-style:italic;color:#c9b463;line-height:1.6;
+    opacity:0;transition:opacity .5s;}
+  #tutbar.on{opacity:1;}
+  #tutbar .skip{display:block;margin-top:8px;font-size:10px;letter-spacing:.3em;
+    text-transform:uppercase;font-style:normal;color:var(--dim);cursor:pointer;pointer-events:auto;}
+  #tutbar .skip:hover{color:var(--ink);}
 
   #journal .jwrap{max-width:560px;width:92%;max-height:74vh;overflow-y:auto;text-align:left;padding:0 14px;}
   #journal .jwrap::-webkit-scrollbar{width:3px;} #journal .jwrap::-webkit-scrollbar-thumb{background:#4a3d28;}
@@ -103,7 +117,9 @@
     <div class="xname"></div>
     <div class="xdesc"></div>
     <div class="xread"></div>
+    <div class="xnight"></div>
   </div>
+  <div id="tutbar"><span id="tuttext"></span><span class="skip" id="tutskip">skip the practice</span></div>
   <div id="seedtag"></div>
 </div>
 
@@ -118,7 +134,10 @@
   <h1>SECOND HAND</h1>
   <div class="sub">you are the inside of a stranger's coat pocket</div>
   <button class="plain" id="beginbtn">meet them</button>
-  <div style="margin-top:14px"><button class="plain" id="howtobtn" style="font-size:11px;padding:10px 24px;border-color:#33291a;color:var(--dim)">how to play</button></div>
+  <div style="margin-top:14px">
+    <button class="plain" id="demobtn" style="font-size:11px;padding:10px 24px;border-color:#33291a;color:var(--dim)">practice first &middot; 2 min</button>
+    <button class="plain" id="howtobtn" style="font-size:11px;padding:10px 24px;border-color:#33291a;color:var(--dim)">how to play</button>
+  </div>
   <div class="seedline">stranger no. <span id="seedid"></span> &nbsp;&middot;&nbsp; or summon one: <input id="seedin" maxlength="12" spellcheck="false"></div>
   <div class="hint">seven days. you never see them &mdash; only what falls in, and how they move.</div>
 </div>
@@ -130,6 +149,7 @@
     <p class="on"><b>watch what falls in.</b> every object is a clue about who they are &mdash; and one of them will turn out to matter more than the rest.</p>
     <p class="on"><b>drag to nudge things.</b> you are weak while they move and strong while they rest. wait for sitting, or night.</p>
     <p class="on"><b>click a thing to examine it.</b> every find is logged in the <b>pocket book</b> (top right) — what it is, and what it betrays about them. work the case.</p>
+    <p class="on"><b>at night, examine again.</b> when the light turns blue and the coat hangs still, things confess a second, stranger line. the pocket book keeps those too.</p>
     <p class="on"><b>the hole</b> (lower right seam) eats anything small that rests on it &mdash; and it grows every day. pull things to safety, or deliberately feed it something they'd be better off losing. <b>rub across the hole</b> to pull its threads tighter for a while.</p>
     <p class="on"><b>the fingers</b> dive in at story moments, hunting a specific object. leave it findable and the story goes one way. hide it in a corner &mdash; or down the hole &mdash; and the story goes another. both are allowed.</p>
     <p class="on">at week's end the coat is donated. everything you kept becomes someone else's beginning.</p>

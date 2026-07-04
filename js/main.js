@@ -199,6 +199,7 @@
         }
         break;
       case 'handEnd': {
+        if (demo.active) { demo.flags.handResult = ev.result; break; }
         const m = ev.ev.minor;
         if (ev.result === 'took') toast(m ? 'fare found. the day moves on.' : 'they found ' + ev.label + '. it goes up into the light.');
         else if (ev.result === 'miss') toast(m ? 'no coin to be found. a small sigh from above.' : 'they came up empty. that changes things.');
@@ -215,13 +216,32 @@
     if (!it || !it.def.desc) return;
     const fresh = !g.journal[it.type];
     g.journal[it.type] = dayIdx + 1;
+    const isNight = SH.Sim.lightCol === 'blue';
+    let freshNight = false;
+    if (isNight && it.def.night && !g.journalNight[it.type]) {
+      g.journalNight[it.type] = true;
+      freshNight = true;
+    }
     $('exam').querySelector('.xname').textContent = it.label;
     $('exam').querySelector('.xdesc').textContent = it.def.desc;
     $('exam').querySelector('.xread').textContent = it.def.read;
+    const xn = $('exam').querySelector('.xnight');
+    if (g.journalNight[it.type] && it.def.night) {
+      xn.textContent = it.def.night;
+      xn.className = 'xnight';
+    } else if (it.def.night) {
+      xn.textContent = '(there is more. ask again at night.)';
+      xn.className = 'xnight hint';
+    } else {
+      xn.textContent = '';
+    }
     $('exam').classList.add('on');
     clearTimeout(examTimer);
     examTimer = setTimeout(() => $('exam').classList.remove('on'), 7000);
-    if (fresh) {
+    if (freshNight) {
+      toast('a confession, by moonlight. the pocket book keeps it.');
+      Audio2.blip(392, 0.6, 0.03, 'sine');
+    } else if (fresh) {
       toast('logged in the pocket book: ' + it.label + '.');
       Audio2.blip(660, 0.25, 0.03, 'triangle');
     }
@@ -255,8 +275,11 @@
       if (g.journal[it.type]) {
         any = true;
         const gone = it.fate !== 'in-pocket' && !g.items.some(o => o.type === it.type && o.fate === 'in-pocket');
+        let extra = '';
+        if (g.journalNight[it.type] && it.def.night) extra = '<br><span class="jn">' + it.def.night + '</span>';
+        else if (it.def.night && !gone) extra = '<br><span class="jnh">(more at night. things confess in the dark.)</span>';
         html += '<div class="jentry"><b>' + it.label + '</b>' + (gone ? ' <i>(no longer with us)</i>' : '') +
-          ' — ' + it.def.desc + '<br><i>' + it.def.read + '</i></div>';
+          ' — ' + it.def.desc + '<br><i>' + it.def.read + '</i>' + extra + '</div>';
       } else if (it.fate === 'in-pocket') unexamined++;
     }
     if (unexamined) html += '<div class="jentry junk">' + unexamined + ' thing' + (unexamined > 1 ? 's' : '') + ' still unexamined, down in the dark.</div>';
@@ -308,10 +331,149 @@
     cardEl.addEventListener('click', advance);
   }
 
+  /* ---------------- the practice pocket: a guided sandbox ---------------- */
+  const demo = { active: false, step: -1, t: 0, flags: {}, base: 0, saveT: 0 };
+
+  function demoText(msg) {
+    $('tuttext').textContent = msg;
+    $('tutbar').classList.add('on');
+  }
+
+  const DEMO_STEPS = [
+    {
+      text: 'this is the inside of a coat pocket. things fall in. here comes one now.',
+      enter() { SH.Sim.spawnItem('coin'); },
+      done() { return demo.t > 3.5; },
+    },
+    {
+      text: 'drag slowly across the coin to nudge it around. right now the owner is still, so you are strong.',
+      enter() { demo.base = SH.Sim.nudgeCount || 0; },
+      done() { return (SH.Sim.nudgeCount || 0) - demo.base > 20; },
+    },
+    {
+      text: 'good. now click the coin — one short, gentle tap — to examine it.',
+      done() { return !!g.journal.coin; },
+    },
+    {
+      text: 'everything you examine is logged. open the pocket book (top right), have a read, then close it.',
+      done() { return demo.flags.jopen && demo.flags.jclosed; },
+    },
+    {
+      text: 'the lower-right seam has a hole. something small is drifting toward it — drag it to safety before it works through.',
+      enter() {
+        SH.Sim.holeR = 12;
+        demoDropTreat();
+      },
+      done(dt) {
+        const t = g.items.find(i => i.type === 'treat');
+        if (!t) return false;
+        if (t.fate === 'lost') {
+          toast('gone. that is also how it goes. here — another.');
+          demoDropTreat();
+          return false;
+        }
+        if (t.body && Math.hypot(t.body.position.x - SH.Sim.holeC.x, t.body.position.y - SH.Sim.holeC.y) > 150) {
+          demo.saveT += dt;
+          if (demo.saveT > 1.2) return true;
+        } else demo.saveT = 0;
+        return false;
+      },
+    },
+    {
+      text: 'saved. now rub back and forth across the hole itself — you can stitch it tighter for a while.',
+      enter() { demo.base = SH.Sim.mend; },
+      done() { return SH.Sim.mend > 0.4; },
+    },
+    {
+      text: 'listen — the fingers are coming down for that coin. your choice: leave it findable, or drag it far away and hide it.',
+      enter() {
+        if (!g.items.some(i => i.type === 'coin' && i.fate === 'in-pocket')) SH.Sim.spawnItem('coin');
+        SH.Sim.hands = [{ f: (SH.Sim.t + 2.5) / SH.Sim.dur, seek: 'coin', action: 'take', minor: true }];
+        SH.Sim.hi = 0;
+        demo.flags.handResult = null;
+      },
+      done() { return !!demo.flags.handResult; },
+      after() {
+        toast(demo.flags.handResult === 'took'
+          ? 'they found it. sometimes that is the kind thing.'
+          : 'they came up empty. you just changed a tiny story.');
+      },
+    },
+    {
+      text: 'night falls. the light turns blue, and things confess more in the dark — examine something again.',
+      enter() {
+        SH.Sim.segments[0].act = 'night';
+        SH.Sim.setSeg(0);
+        if (!g.items.some(i => i.fate === 'in-pocket' && !i.def.chain)) SH.Sim.spawnItem('coin');
+      },
+      done() { return Object.keys(g.journalNight).length > 0; },
+    },
+    {
+      text: 'that is everything. the real pocket has a person attached — seven days of them, and only one of you.',
+      done() { return demo.t > 5; },
+    },
+  ];
+
+  function demoDropTreat() {
+    const it = SH.Sim.spawnItem('treat');
+    if (it && it.body) {
+      Matter.Body.setPosition(it.body, { x: SH.Sim.holeC.x - 55, y: SH.Sim.holeC.y - 90 });
+      Matter.Body.setVelocity(it.body, { x: 1.6, y: 1.2 });
+    }
+    demo.saveT = 0;
+  }
+
+  function startDemo() {
+    Audio2.init();
+    Audio2.stopNoir();
+    tut.fresh = false; tut.finish(); // the practice replaces the drip-feed hints
+    g = SH.generateStranger(777);
+    g.journal = {}; g.journalNight = {};
+    SH.Sim.init(g);
+    SH.Sim.startDay({ drops: [], hands: [], mods: {} }, 2, [{ act: 'still', dur: 9999 }], 9999);
+    SH.Render.makeTextures(g);
+    $('title').classList.add('hidden');
+    $('hud').classList.remove('hidden');
+    $('daylabel').textContent = 'the practice pocket';
+    $('actlabel').textContent = '';
+    $('seedtag').textContent = '';
+    state = 'demo';
+    demo.active = true; demo.step = -1; demo.t = 0; demo.flags = {};
+    nextDemoStep();
+  }
+
+  function nextDemoStep() {
+    const prev = DEMO_STEPS[demo.step];
+    if (prev && prev.after) prev.after();
+    demo.step++;
+    demo.t = 0;
+    if (demo.step >= DEMO_STEPS.length) { endDemo(); return; }
+    const s = DEMO_STEPS[demo.step];
+    demoText(s.text);
+    if (s.enter) s.enter();
+  }
+
+  function endDemo() {
+    demo.active = false;
+    $('tutbar').classList.remove('on');
+    $('hud').classList.add('hidden');
+    $('exam').classList.remove('on');
+    $('title').classList.remove('hidden');
+    state = 'title';
+    g = null;
+  }
+
+  function demoTick(dt) {
+    demo.t += dt;
+    const s = DEMO_STEPS[demo.step];
+    if (s && s.done(dt)) nextDemoStep();
+  }
+
   /* ---------------- game flow ---------------- */
   function newGame(seed) {
     g = SH.generateStranger(seed);
     g.journal = {};
+    g.journalNight = {};
     SH.Sim.init(g);
     SH.Render.makeTextures(g);
     $('seedtag').textContent = 'stranger no. ' + g.seedId;
@@ -391,7 +553,7 @@
   });
   window.addEventListener('pointerup', e => {
     // a short, still press is an examination, not a nudge
-    if (pdown && downAt && state === 'day' &&
+    if (pdown && downAt && (state === 'day' || state === 'demo') &&
         performance.now() - downAt.t < 320 &&
         Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 9) {
       const w = SH.Render.toWorld(e.clientX, e.clientY);
@@ -444,16 +606,23 @@
   $('howtobtn').addEventListener('click', () => $('howto').classList.remove('hidden'));
   $('howtoclose').addEventListener('click', () => $('howto').classList.add('hidden'));
 
+  let jrnPrev = 'day';
   $('jrnbtn').addEventListener('click', () => {
-    if (state !== 'day') return;
+    if (state !== 'day' && state !== 'demo') return;
+    jrnPrev = state;
     buildJournal();
     $('journal').classList.remove('hidden');
     state = 'journal'; // the world holds its breath while you read
+    if (demo.active) demo.flags.jopen = true;
   });
   $('jrnclose').addEventListener('click', () => {
     $('journal').classList.add('hidden');
-    if (state === 'journal') state = 'day';
+    if (state === 'journal') state = jrnPrev;
+    if (demo.active && demo.flags.jopen) demo.flags.jclosed = true;
   });
+
+  $('demobtn').addEventListener('click', startDemo);
+  $('tutskip').addEventListener('click', endDemo);
 
   // the title hums like the start of a case
   $('title').addEventListener('pointerdown', () => Audio2.startNoir(), { once: true });
@@ -463,11 +632,12 @@
     requestAnimationFrame(loop);
     const dt = Math.min(0.05, (now - last) / 1000 || 0.016);
     last = now;
-    if (state === 'day' && g) {
+    if ((state === 'day' || state === 'demo') && g) {
       for (let i = 0; i < timescale; i++) SH.Sim.update(dt);
       for (const ev of SH.Sim.events) { Audio2.handle(ev); narrate(ev); }
       SH.Sim.events.length = 0;
-      if (SH.Sim.done) endOfDay();
+      if (state === 'day' && SH.Sim.done) endOfDay();
+      if (state === 'demo') demoTick(dt);
     }
     SH.Render.draw(dt);
   }
