@@ -217,7 +217,7 @@
       case 'handStart':
         if (tut.need('hand'))
           toast('the fingers. they are hunting something — help them find it, or hide it. both change the story.', true, 7000);
-        else if (ev.ev.minor) toast('the fingers, counting fare.');
+        else if (ev.ev.minor) toast('the fingers, counting bus money.');
         else if (ev.ev.action === 'give') toast('the fingers bring something down.');
         else {
           const d = SH.ITEM_DEFS[ev.ev.seek];
@@ -231,7 +231,7 @@
       case 'handEnd': {
         if (demo.active) { demo.flags.handResult = ev.result; break; }
         const m = ev.ev.minor;
-        if (ev.result === 'took') toast(m ? 'fare found. the day moves on.' : 'they found ' + ev.label + '. it goes up into the light.');
+        if (ev.result === 'took') toast(m ? 'bus money found. the day moves on.' : 'they found ' + ev.label + '. it goes up into the light.');
         else if (ev.result === 'miss') toast(m ? 'no coin to be found. a small sigh from above.' : 'they came up empty. that changes things.');
         else if (ev.result === 'returned') toast(ev.label + ' — used, and put back.');
         else if (ev.result === 'peeked') toast(ev.label + ' — held, considered, put back.');
@@ -293,10 +293,24 @@
     let html = '<h3>the stranger</h3>';
     html += '<div class="jentry">the walk: <i>' + g.motion.label + '</i></div>';
     const workKnown = g.occ.filler.some(t => g.journal[t]) || dayIdx >= 3;
-    html += '<div class="jentry">the work: <i>' + (workKnown ? g.occ.line : 'unknown. examine what the job leaves behind.') + '</i></div>';
+    html += '<div class="jentry">the work: <i>' + (workKnown ? g.occ.line : 'unknown. examine the things their job drops in.') + '</i></div>';
     const key = g.arc.keyType;
     if (g.journal[key]) html += '<div class="jentry">the matter at hand: <i>' + SH.ITEM_DEFS[key].read + '</i></div>';
-    else html += '<div class="jentry junk">the matter at hand: not yet understood.</div>';
+    else html += '<div class="jentry junk">the matter at hand: not worked out yet.</div>';
+
+    // the suspect board
+    html += '<h3>who might they be?</h3>';
+    html += '<div class="jentry junk" style="margin-bottom:10px">one of these four is them. use the evidence. you answer at the end of the week.</div>';
+    for (const s of g.suspects) {
+      const struck = g.suspectStruck[s.id], picked = g.suspectPick === s.id;
+      html += '<div class="sus' + (struck ? ' out' : '') + (picked ? ' pick' : '') + '" data-sid="' + s.id + '">' +
+        '<div class="susname">' + s.name + (picked ? ' — your pick' : '') + '</div>' +
+        '<div class="susblurb">' + s.blurb + '</div>' +
+        '<div class="susbtns">' +
+        '<span class="susbtn" data-act="pick" data-sid="' + s.id + '">' + (picked ? 'unpick' : 'this is them') + '</span>' +
+        '<span class="susbtn" data-act="strike" data-sid="' + s.id + '">' + (struck ? 'un-rule out' : 'rule out') + '</span>' +
+        '</div></div>';
+    }
     html += '<h3>evidence</h3>';
     const seenT = {}; let unexamined = 0, any = false;
     for (const it of g.items) {
@@ -315,6 +329,20 @@
     if (unexamined) html += '<div class="jentry junk">' + unexamined + ' thing' + (unexamined > 1 ? 's' : '') + ' still unexamined, down in the dark.</div>';
     if (!any && !unexamined) html += '<div class="jentry junk">nothing yet. the pocket is young.</div>';
     $('jwrap').innerHTML = html;
+    // wire the suspect buttons
+    for (const b of $('jwrap').querySelectorAll('.susbtn')) {
+      b.addEventListener('click', () => {
+        const sid = +b.dataset.sid;
+        if (b.dataset.act === 'pick') {
+          g.suspectPick = (g.suspectPick === sid) ? null : sid;
+          delete g.suspectStruck[sid];
+        } else {
+          g.suspectStruck[sid] = !g.suspectStruck[sid];
+          if (g.suspectPick === sid) g.suspectPick = null;
+        }
+        buildJournal();
+      });
+    }
   }
 
   /* first-play tutorial: each hint fires once, remembered across visits */
@@ -336,9 +364,14 @@
     pickVoice() {
       if (this.voice || !window.speechSynthesis) return;
       const vs = speechSynthesis.getVoices();
-      this.voice = vs.find(v => /en-GB/i.test(v.lang) && /male|ryan|george|arthur/i.test(v.name)) ||
-                   vs.find(v => /en-GB/i.test(v.lang)) ||
-                   vs.find(v => /^en/i.test(v.lang)) || null;
+      // prefer the neural "Natural"/"Online" voices (Edge ships excellent ones)
+      this.voice =
+        vs.find(v => /en-GB/i.test(v.lang) && /natural|online/i.test(v.name) && /ryan|thomas|male/i.test(v.name)) ||
+        vs.find(v => /en-GB/i.test(v.lang) && /natural|online/i.test(v.name)) ||
+        vs.find(v => /^en/i.test(v.lang) && /natural|online/i.test(v.name)) ||
+        vs.find(v => /en-GB/i.test(v.lang)) ||
+        vs.find(v => /^en/i.test(v.lang)) || null;
+      this.natural = !!(this.voice && /natural|online/i.test(this.voice.name));
     },
     speak(text) {
       if (!this.on || !window.speechSynthesis) return;
@@ -347,7 +380,10 @@
         this.pickVoice();
         const u = new SpeechSynthesisUtterance(text);
         if (this.voice) u.voice = this.voice;
-        u.rate = 0.82; u.pitch = 0.7; u.volume = 0.85;
+        // neural voices sound best untouched; only slow the robotic fallbacks
+        u.rate = this.natural ? 0.95 : 0.88;
+        u.pitch = this.natural ? 1.0 : 0.9;
+        u.volume = 0.9;
         speechSynthesis.speak(u);
       } catch (e) {}
     },
@@ -374,7 +410,7 @@
       return p;
     });
     cardEl.classList.remove('hidden');
-    Voice.speak(head.replace(/—/g, ',').toLowerCase() + '. ' + lines.join(' '));
+    Voice.speak(lines.join(' ')); // just the story — not the date stamp
     ps.forEach((p, i) => setTimeout(() => p.classList.add('on'), 350 + i * 900));
     const readyAt = 350 + ps.length * 900 + 300;
     setTimeout(() => go.classList.add('on'), readyAt);
@@ -574,28 +610,24 @@
     showGuess();
   }
 
-  /* the deduction: who were they? */
+  /* the deduction: pick your suspect from the lineup */
   function showGuess() {
-    const mk = (boxId, opts, key) => {
-      const box = $(boxId);
-      box.innerHTML = '';
-      SH.shuffle(SH.mulberry32(g.seed ^ 0x51ed), opts).forEach(o => {
-        const b = document.createElement('button');
-        b.className = 'gopt';
-        b.textContent = o.line;
-        b.addEventListener('click', () => {
-          g[key] = o.id;
-          for (const c of box.children) c.classList.remove('sel');
-          b.classList.add('sel');
-          $('guessgo').disabled = !(g.guessWork && g.guessMatter);
-        });
-        box.appendChild(b);
+    const box = $('gsuspects');
+    box.innerHTML = '';
+    g.finalPick = (g.suspectPick !== null && !g.suspectStruck[g.suspectPick]) ? g.suspectPick : null;
+    for (const s of g.suspects) {
+      const b = document.createElement('button');
+      b.className = 'gopt' + (g.finalPick === s.id ? ' sel' : '') + (g.suspectStruck[s.id] ? ' struck' : '');
+      b.innerHTML = '<b>' + s.name + '</b> — ' + s.blurb;
+      b.addEventListener('click', () => {
+        g.finalPick = s.id;
+        for (const c of box.children) c.classList.remove('sel');
+        b.classList.add('sel');
+        $('guessgo').disabled = false;
       });
-    };
-    g.guessWork = null; g.guessMatter = null;
-    mk('gwork', SH.GUESSES.work, 'guessWork');
-    mk('gmatter', SH.GUESSES.matter, 'guessMatter');
-    $('guessgo').disabled = true;
+      box.appendChild(b);
+    }
+    $('guessgo').disabled = g.finalPick === null;
     $('guess').classList.remove('hidden');
   }
 
@@ -620,18 +652,18 @@
     const list = $('fatelist');
     list.innerHTML = '';
     // the verdict on your reading of them
-    if (g.guessWork || g.guessMatter) {
-      const wOK = g.guessWork === g.occ.id, mOK = g.guessMatter === g.arc.id;
+    if (g.finalPick !== null && g.finalPick !== undefined) {
+      const picked = g.suspects.find(s => s.id === g.finalPick);
+      const truth = g.suspects.find(s => s.correct);
+      const right = picked && picked.correct;
       const v = document.createElement('div');
       v.style.marginBottom = '18px';
       v.innerHTML =
-        'your reading of them:<br>' +
-        'the work — <span class="' + (wOK ? 'fate-kept' : 'fate-lost') + '">' +
-        (wOK ? 'right' : 'wrong. ' + g.occ.line) + '</span><br>' +
-        'the matter — <span class="' + (mOK ? 'fate-kept' : 'fate-lost') + '">' +
-        (mOK ? 'right' : 'wrong. it was: ' + SH.GUESSES.matter.find(m => m.id === g.arc.id).line) + '</span><br>' +
-        '<span style="color:#c9b463">' + (wOK && mOK ? 'you would make a fine pocket.' :
-          (wOK || mOK) ? 'half-read. most people are.' : 'strangers keep their secrets. that is fair too.') + '</span>';
+        'you said it was <b>' + picked.name + '</b> — <span class="' + (right ? 'fate-kept' : 'fate-lost') + '">' +
+        (right ? 'and you were right.' : 'but it was ' + truth.name + '.') + '</span><br>' +
+        '<i>' + truth.blurb + '</i><br>' +
+        '<span style="color:#c9b463">' + (right ? 'you would make a fine pocket.' :
+          'strangers keep their secrets. that is fair too.') + '</span>';
       list.appendChild(v);
     }
     const FATE = {

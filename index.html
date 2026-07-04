@@ -55,7 +55,19 @@
     font-size:14.5px;font-style:italic;padding:10px 18px;cursor:pointer;text-align:left;transition:all .25s;}
   .gopt:hover{color:var(--ink);border-color:#6a5a3c;}
   .gopt.sel{color:#c9b463;border-color:#c9b463;background:rgba(201,180,99,.07);}
+  .gopt.struck{opacity:.4;text-decoration:line-through;}
+  .gopt b{font-weight:normal;letter-spacing:.15em;text-transform:uppercase;font-size:11px;font-style:normal;}
   #guessgo:disabled{opacity:.35;cursor:default;}
+
+  .sus{border:1px solid #3a3020;padding:12px 16px;margin-bottom:10px;transition:all .25s;}
+  .sus.pick{border-color:#c9b463;background:rgba(201,180,99,.06);}
+  .sus.out{opacity:.42;}
+  .sus.out .susblurb{text-decoration:line-through;}
+  .susname{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:#c9b463;margin-bottom:6px;}
+  .susblurb{font-size:15px;font-style:italic;color:var(--ink);line-height:1.55;margin-bottom:8px;}
+  .susbtns{display:flex;gap:18px;}
+  .susbtn{font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--dim);cursor:pointer;}
+  .susbtn:hover{color:var(--ink);}
   .gq h3{font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:#c9b463;
     font-weight:normal;margin-bottom:4px;}
   #voicebtn{margin-top:18px;background:none;border:none;color:var(--dim);font-family:inherit;
@@ -157,15 +169,15 @@
 <div id="howto" class="overlay hidden">
   <div class="kicker">how to play</div>
   <div class="cardlines" style="font-style:normal;font-size:16px;text-align:left;max-width:560px;">
-    <p class="on">you are the inside of a stranger's coat pocket, for seven days. you never see them &mdash; the swaying is them walking; the crush is them sitting; the stillness is night.</p>
-    <p class="on"><b>watch what falls in.</b> every object is a clue about who they are &mdash; and one of them will turn out to matter more than the rest.</p>
-    <p class="on"><b>drag to nudge things.</b> you are weak while they move and strong while they rest. wait for sitting, or night.</p>
-    <p class="on"><b>click a thing to examine it.</b> every find is logged in the <b>pocket book</b> (top right) — what it is, and what it betrays about them. work the case.</p>
-    <p class="on"><b>at night, examine again.</b> when the light turns blue and the coat hangs still, things confess a second, stranger line. the pocket book keeps those too.</p>
-    <p class="on"><b>the hole</b> (lower right seam) eats anything small that rests on it &mdash; and it grows every day. pull things to safety, or deliberately feed it something they'd be better off losing. <b>rub across the hole</b> to pull its threads tighter for a while.</p>
-    <p class="on"><b>the fingers</b> dive in at story moments, hunting a specific object. leave it findable and the story goes one way &mdash; or hide it and the story goes another. both are allowed.</p>
-    <p class="on"><b>the dark corner</b>, low on the left, is a drift of lint the fingers never think to search. anything you drag in there cannot be found &mdash; or taken.</p>
-    <p class="on">at week's end the coat is donated. everything you kept becomes someone else's beginning.</p>
+    <p class="on">you are the inside of a stranger's coat pocket, for seven days. you never see them &mdash; when the pocket sways, they're walking. when everything gets squashed, they sat down. when it all goes still and blue, it's night.</p>
+    <p class="on"><b>watch what falls in.</b> every object is a clue about who they are &mdash; and one of them matters more than all the rest.</p>
+    <p class="on"><b>drag to push things around.</b> you are weak while they move and strong while they rest. wait for sitting, or night.</p>
+    <p class="on"><b>click a thing to examine it.</b> it gets written into the <b>pocket book</b> (top right): what it is, and what it tells you about them.</p>
+    <p class="on"><b>examine again at night.</b> in the blue light, every object gives up one extra secret. the pocket book keeps those too.</p>
+    <p class="on"><b>the mystery:</b> the pocket book shows four possible people. only one is really them. use your clues to rule people out &mdash; at the end of the week, you pick your answer.</p>
+    <p class="on"><b>the hole</b> (lower right) pulls in anything small that gets close &mdash; and it grows every day. drag things to safety, or feed it something they'd be better off losing. <b>rub across the hole</b> to stitch it tighter for a while.</p>
+    <p class="on"><b>the fingers</b> dive in hunting for things. leave the thing where they can find it &mdash; or hide it in <b>the dark corner</b>, low on the left, where they never search. both choices change the story.</p>
+    <p class="on">at the end of the week the coat is given away. everything you kept becomes someone else's lucky find.</p>
   </div>
   <div style="margin-top:30px"><button class="plain" id="howtoclose">understood</button></div>
 </div>
@@ -179,10 +191,9 @@
 
 <div id="guess" class="overlay hidden">
   <div class="kicker">before the coat goes</div>
-  <div class="cardhead">what did you learn of them?</div>
-  <div class="gq"><h3>their work</h3><div class="gopts" id="gwork"></div></div>
-  <div class="gq"><h3>the matter at hand</h3><div class="gopts" id="gmatter"></div></div>
-  <button class="plain" id="guessgo" disabled>seal the pocket book</button>
+  <div class="cardhead">so &mdash; who were they?</div>
+  <div class="gopts" id="gsuspects" style="max-width:560px;width:92%"></div>
+  <button class="plain" id="guessgo" disabled>this is my answer</button>
 </div>
 
 <div id="end" class="overlay hidden">
