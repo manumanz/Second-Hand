@@ -294,6 +294,22 @@
     ctx.restore();
   }
 
+  /* the lining path: one old repair seam that ties the three stations together —
+     thimble, dark corner, hole. the pocket's workbench, stitched in place. */
+  function drawLiningPath() {
+    const sim = SH.Sim;
+    if (!sim.thimbleC) return;
+    ctx.strokeStyle = 'rgba(190,160,110,.13)';
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([4, 7]);
+    ctx.beginPath();
+    ctx.moveTo(sim.thimbleC.x, sim.thimbleC.y + 14);
+    ctx.quadraticCurveTo(sim.hideC.x - 40, (sim.thimbleC.y + sim.hideC.y) / 2, sim.hideC.x, sim.hideC.y - 8);
+    ctx.quadraticCurveTo(sim.hideC.x + 70, sim.hideC.y + 90, sim.holeC.x - sim.holeR - 14, sim.holeC.y - 4);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
   /* ---------------- the thimble ---------------- */
   function drawThimble() {
     const sim = SH.Sim;
@@ -330,6 +346,21 @@
       ctx.beginPath();
       ctx.arc(x, y, 26, -Math.PI / 2, -Math.PI / 2 + prog * Math.PI * 2);
       ctx.stroke();
+    }
+    // while you hold something, the stations offer themselves
+    if (sim.dragIt && !busy) {
+      const pulse = 0.25 + Math.sin(T * 5) * 0.12;
+      if (sim.thimbleLeft > 0) {
+        ctx.strokeStyle = 'rgba(232,196,120,' + pulse.toFixed(3) + ')';
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([3, 4]);
+        ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      ctx.strokeStyle = 'rgba(160,145,120,' + (pulse * 0.7).toFixed(3) + ')';
+      ctx.setLineDash([3, 5]);
+      ctx.beginPath(); ctx.arc(sim.hideC.x, sim.hideC.y, 62, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
     }
   }
 
@@ -607,6 +638,26 @@
       ctx.stroke();
     }
 
+    // station labels: hovering a fixture names it and its purpose
+    let stTxt = null;
+    if (!hov && sim.thimbleC) {
+      if (Math.hypot(p.x - sim.thimbleC.x, p.y - sim.thimbleC.y) < 42)
+        stTxt = 'the thimble — drag things here to read them (' + (sim.thimbleLeft || 0) + ' left)';
+      else if (Math.hypot(p.x - sim.hideC.x, p.y - sim.hideC.y) < 70)
+        stTxt = 'the dark corner — nothing here can be found';
+      else if (Math.hypot(p.x - sim.holeC.x, p.y - sim.holeC.y) < sim.holeR + 26)
+        stTxt = 'the hole — it eats. stitch it, plug it, or feed it';
+    }
+    if (stTxt) {
+      ctx.font = 'italic 15px Georgia, serif';
+      const tw2 = ctx.measureText(stTxt).width;
+      let tx2 = Math.min(p.x + 20, 890 - tw2), ty2 = p.y - 18;
+      ctx.fillStyle = 'rgba(5,3,2,.72)';
+      ctx.fillRect(tx2 - 6, ty2 - 14, tw2 + 12, 21);
+      ctx.fillStyle = 'rgba(201,180,99,.9)';
+      ctx.fillText(stTxt, tx2, ty2);
+    }
+
     // hover label: identify what the eye has found
     if (hov) {
       const seen = sim.g && sim.g.journal && sim.g.journal[hov.type];
@@ -643,6 +694,7 @@
     if (weaveCv) ctx.drawImage(weaveCv, 0, 0);
     drawPocket();
     drawShaft(0.6, true);
+    drawLiningPath();
     drawHole();
     drawThimble();
     if (sim.g) for (const it of sim.g.items) drawItem(it);

@@ -6,33 +6,33 @@
 
   /* ---------------- schedule templates: a day in the life, by occupation ---------------- */
   const SCHED = {
-    office:    [['still', 6, 10], ['walk', 10, 14], ['bus', 10, 14], ['sit', 14, 20], ['walk', 6, 9], ['sit', 10, 16], ['walk', 8, 12], ['night', 17, 23]],
-    barista:   [['walk', 8, 12], ['brisk', 10, 14], ['still', 8, 12], ['walk', 8, 10], ['sit', 8, 12], ['walk', 6, 10], ['night', 17, 23]],
-    courier:   [['brisk', 8, 12], ['run', 8, 12], ['sit', 4, 7], ['run', 10, 14], ['walk', 6, 10], ['sit', 6, 10], ['night', 16, 21]],
-    student:   [['run', 5, 8], ['bus', 8, 12], ['sit', 16, 22], ['walk', 6, 9], ['sit', 10, 14], ['walk', 8, 12], ['night', 17, 23]],
-    bartender: [['sit', 8, 12], ['walk', 8, 12], ['still', 10, 14], ['brisk', 8, 12], ['walk', 10, 14], ['night', 16, 21]],
-    gardener:  [['walk', 8, 12], ['still', 10, 14], ['walk', 8, 12], ['sit', 6, 10], ['brisk', 6, 10], ['still', 8, 12], ['night', 16, 21]],
-    nurse:     [['night', 14, 18], ['walk', 6, 9], ['bus', 8, 10], ['still', 12, 16], ['brisk', 8, 12], ['still', 8, 12], ['night', 14, 18]],
+    office:    [['still', 4, 6], ['walk', 6, 9], ['bus', 6, 9], ['sit', 9, 13], ['walk', 4, 6], ['sit', 6, 10], ['walk', 5, 8], ['night', 12, 16]],
+    barista:   [['walk', 5, 8], ['brisk', 6, 9], ['still', 5, 8], ['walk', 5, 7], ['sit', 5, 8], ['walk', 4, 7], ['night', 12, 16]],
+    courier:   [['brisk', 5, 8], ['run', 5, 8], ['sit', 3, 5], ['run', 6, 9], ['walk', 4, 7], ['sit', 4, 7], ['night', 11, 14]],
+    student:   [['run', 3, 5], ['bus', 5, 8], ['sit', 10, 14], ['walk', 4, 6], ['sit', 6, 9], ['walk', 5, 8], ['night', 12, 16]],
+    bartender: [['sit', 5, 8], ['walk', 5, 8], ['still', 6, 9], ['brisk', 5, 8], ['walk', 6, 9], ['night', 11, 14]],
+    gardener:  [['walk', 5, 8], ['still', 6, 9], ['walk', 5, 8], ['sit', 4, 7], ['brisk', 4, 7], ['still', 5, 8], ['night', 11, 14]],
+    nurse:     [['night', 9, 12], ['walk', 4, 6], ['bus', 5, 7], ['still', 8, 11], ['brisk', 5, 8], ['still', 5, 8], ['night', 9, 12]],
   };
 
   function buildSchedule(g, mods) {
     const r = g.rng;
     let segs = SCHED[g.occ.sched].map(([act, a, b]) => ({ act, dur: rf(r, a, b) }));
     if (mods.perform) {
-      segs.splice(1, 1, { act: 'perform', dur: rf(r, 14, 18) });
-      segs.splice(3, 0, { act: 'perform', dur: rf(r, 10, 14) });
+      segs.splice(1, 1, { act: 'perform', dur: rf(r, 9, 12) });
+      segs.splice(3, 0, { act: 'perform', dur: rf(r, 7, 9) });
     }
     if (mods.pace) {
-      segs.splice(2, 0, { act: 'pace', dur: rf(r, 8, 12) });
-      segs.splice(segs.length - 1, 0, { act: 'pace', dur: rf(r, 6, 10) });
+      segs.splice(2, 0, { act: 'pace', dur: rf(r, 5, 8) });
+      segs.splice(segs.length - 1, 0, { act: 'pace', dur: rf(r, 4, 7) });
     }
     if (mods.frantic) {
-      segs.splice(1, 0, { act: 'pace', dur: rf(r, 8, 11) });
-      segs.splice(3, 0, { act: 'brisk', dur: rf(r, 6, 9) });
+      segs.splice(1, 0, { act: 'pace', dur: rf(r, 5, 8) });
+      segs.splice(3, 0, { act: 'brisk', dur: rf(r, 4, 6) });
     }
-    if (mods.joy || mods.runjoy) segs.splice(2, 0, { act: 'run', dur: rf(r, 6, 9) });
-    if (mods.sprint) segs.unshift({ act: 'run', dur: rf(r, 11, 14) });
-    if (mods.heavy) segs.splice(1, 0, { act: 'brisk', dur: rf(r, 8, 12) });
+    if (mods.joy || mods.runjoy) segs.splice(2, 0, { act: 'run', dur: rf(r, 4, 6) });
+    if (mods.sprint) segs.unshift({ act: 'run', dur: rf(r, 8, 10) });
+    if (mods.heavy) segs.splice(1, 0, { act: 'brisk', dur: rf(r, 5, 8) });
     return segs;
   }
 
@@ -183,7 +183,7 @@
     el.textContent = msg;
     box.appendChild(el);
     requestAnimationFrame(() => el.classList.add('on'));
-    setTimeout(() => { el.classList.remove('on'); setTimeout(() => el.remove(), 700); }, holdMs || 4200);
+    setTimeout(() => { el.classList.remove('on'); setTimeout(() => el.remove(), 700); }, holdMs || 3400);
   }
 
   /* the stranger's temper: losses make the week rougher and the story colder */
@@ -391,8 +391,7 @@
     $('threadct').textContent = 'threads: ' + (g.threads || 0);
     const left = SH.Sim.thimbleLeft || 0;
     $('tasklist').innerHTML =
-      '<div class="task">the thimble: ' + (left > 0 ? left + ' reading' + (left > 1 ? 's' : '') + ' left today' : 'spent for today') + '</div>' +
-      '<div class="task">drag a thing onto the thimble to test it</div>';
+      '<div class="task">thimble: ' + (left > 0 ? left + ' reading' + (left > 1 ? 's' : '') + ' left' : 'spent for today') + '</div>';
   }
 
   /* what the thimble says about a tested thing */
@@ -481,21 +480,14 @@
   }
 
   function buildJournal() {
-    let html = '<h3>the stranger</h3>';
-    html += '<div class="jentry junk">the walk: watch them. feel the swaying, the speed, the fidgeting. no one will write this down for you.</div>';
+    // 1. THE PROFILE — the whole point of the week, right at the top
+    let html = '<h3>the profile — commit at week’s end</h3>';
     const workKnown = g.occ.filler.some(t => g.journal[t]);
-    html += '<div class="jentry">the work: <i>' + (workKnown ? g.occ.line : 'unknown. examine the things their job drops in.') + '</i></div>';
-    const key = g.arc.keyType;
-    if (g.journal[key]) html += '<div class="jentry">the matter at hand: <i>' + SH.ITEM_DEFS[key].read + '</i></div>';
-    else html += '<div class="jentry junk">the matter at hand: not worked out yet.</div>';
-
-    // the profile board: assemble the person, axis by axis
-    html += '<h3>the profile</h3>';
-    html += '<div class="jentry junk" style="margin-bottom:10px">build them from evidence: one job, one secret, one walk. you commit at the end of the week.</div>';
+    if (workKnown) html += '<div class="jentry"><i>' + g.occ.line + '</i></div>';
     const AXES = [
       ['work', 'occupation', SH.GUESSES.work],
-      ['matter', 'the secret', SH.GUESSES.matter],
-      ['walk', 'the walk', SH.GUESSES.walk],
+      ['matter', 'secret', SH.GUESSES.matter],
+      ['walk', 'walk', SH.GUESSES.walk],
     ];
     for (const [axis, label, opts] of AXES) {
       html += '<div class="paxis"><div class="susname">' + label + '</div>';
@@ -505,20 +497,15 @@
       }
       html += '</div>';
     }
-    // the thimble's testimony so far
-    html += '<h3>the thimble’s readings</h3>';
+    // 2. READINGS — the thimble's testimony, newest last
+    html += '<h3>readings</h3>';
     if (g.readings.length) {
-      for (const rd of g.readings.slice(-8))
-        html += '<div class="jentry' + (rd.hot ? '' : ' junk') + '">day ' + rd.day + ', ' + rd.label + ': <i>' + rd.text + '</i></div>';
+      for (const rd of g.readings.slice(-5))
+        html += '<div class="jentry' + (rd.hot ? '' : ' junk') + '">d' + rd.day + ' · ' + rd.label + ': <i>' + rd.text + '</i></div>';
     } else {
-      html += '<div class="jentry junk">nothing tested yet. drag a thing onto the brass thimble (left seam) and it will read what the thing knows. twice a day. spend it well.</div>';
+      html += '<div class="jentry junk">nothing tested. drag a thing onto the thimble. twice a day. night readings reveal the walk.</div>';
     }
-    html += '<h3>what changed because of you</h3>';
-    if (g.impact && g.impact.length) {
-      for (const line of g.impact.slice(-8)) html += '<div class="jentry"><i>' + line + '</i></div>';
-    } else {
-      html += '<div class="jentry junk">nothing yet. the week is watching.</div>';
-    }
+    // 3. EVIDENCE — one line per thing
     html += '<h3>evidence</h3>';
     const seenT = {}; let unexamined = 0, any = false;
     for (const it of g.items) {
@@ -529,14 +516,18 @@
         const gone = it.fate !== 'in-pocket' && !g.items.some(o => o.type === it.type && o.fate === 'in-pocket');
         let extra = '';
         if (g.journalNight[it.type] && it.def.night) extra = '<br><span class="jn">' + it.def.night + '</span>';
-        else if (it.def.night && !gone) extra = '<br><span class="jnh">(more at night. things confess in the dark.)</span>';
-        const dmg = it.damaged && it.fate === 'in-pocket' ? ' <i>(damaged — one more insult ruins it)</i>' : '';
-        html += '<div class="jentry"><b>' + it.label + '</b>' + (gone ? ' <i>(no longer with us)</i>' : dmg) +
-          ' — ' + it.def.desc + '<br><i>' + it.def.read + '</i>' + extra + '</div>';
+        html += '<div class="jentry"><b>' + it.label + '</b>' +
+          (gone ? ' <i>(gone)</i>' : (it.damaged ? ' <i>(damaged)</i>' : '')) +
+          ' — <i>' + it.def.read + '</i>' + extra + '</div>';
       } else if (it.fate === 'in-pocket') unexamined++;
     }
-    if (unexamined) html += '<div class="jentry junk">' + unexamined + ' thing' + (unexamined > 1 ? 's' : '') + ' still unexamined, down in the dark.</div>';
+    if (unexamined) html += '<div class="jentry junk">' + unexamined + ' unexamined, down in the dark.</div>';
     if (!any && !unexamined) html += '<div class="jentry junk">nothing yet. the pocket is young.</div>';
+    // 4. your fingerprints — short
+    if (g.impact && g.impact.length) {
+      html += '<h3>your fingerprints</h3>';
+      for (const line of g.impact.slice(-4)) html += '<div class="jentry"><i>' + line + '</i></div>';
+    }
     $('jwrap').innerHTML = html;
     // wire the profile options
     for (const b of $('jwrap').querySelectorAll('.popt')) {
@@ -614,8 +605,8 @@
     });
     cardEl.classList.remove('hidden');
     Voice.speak(lines.join(' ')); // just the story — not the date stamp
-    ps.forEach((p, i) => setTimeout(() => p.classList.add('on'), 350 + i * 900));
-    const readyAt = 350 + ps.length * 900 + 300;
+    ps.forEach((p, i) => setTimeout(() => p.classList.add('on'), 300 + i * 600));
+    const readyAt = 300 + ps.length * 600 + 250;
     setTimeout(() => go.classList.add('on'), readyAt);
     let armed = false;
     setTimeout(() => { armed = true; }, readyAt);

@@ -48,7 +48,7 @@
 
   /* the thimble: an old brass thimble caught in the lining — the pocket's one
      instrument. press a thing into it and it reads what the thing knows. */
-  sim.thimbleC = { x: 238, y: 660 };
+  sim.thimbleC = { x: 258, y: 772 }; // on the lining path, just above the dark corner
   sim.thimbleLeft = 2;
   sim.reading = null;
 

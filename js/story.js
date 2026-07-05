@@ -617,17 +617,13 @@
     let d = g.arc.days[n];
     if (typeof d === 'function') d = d(g);
     const lines = (typeof d.lines === 'function' ? d.lines(g) : d.lines || []).slice();
-    if (n > 0 && g.lostYesterday > 0)
-      lines.push('(the pocket lost ' + (g.lostYesterday === 1 ? 'something' : g.lostYesterday + ' things') +
-                 ' yesterday. i felt ' + (g.lostYesterday === 1 ? 'it' : 'each one') + ' go.)');
-    // the temper: a pocket that loses things gets checked, shaken, distrusted
+    // one short aside at most — the temper, or the losses. never both.
     const mood = g.mood || 0;
-    if (n > 0 && mood >= 5)
-      lines.push('(they turned me inside out over the sink last night, and said a word i will not repeat. i have never felt so empty and so seen.)');
-    else if (n > 0 && mood >= 3)
-      lines.push('(they keep counting what is in me. twice this morning already. trust, once dropped, picks up dirt.)');
-    else if (n > 0 && mood >= 1)
-      lines.push('(they noticed something was missing. the hands came down slower today, checking.)');
+    if (n > 0) {
+      if (mood >= 5) lines.push('(they turned me inside out over the sink last night. empty, and seen.)');
+      else if (mood >= 3) lines.push('(they keep counting what is in me. trust picks up dirt.)');
+      else if (g.lostYesterday > 0) lines.push('(the pocket lost ' + (g.lostYesterday === 1 ? 'something' : 'things') + ' yesterday. i felt it.)');
+    }
     const drops = (d.drops || []).slice();
     const r = g.rng;
     const nCoins = ri(r, 0, 2);
