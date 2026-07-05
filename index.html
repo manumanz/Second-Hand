@@ -77,6 +77,13 @@
   .susbtns{display:flex;gap:18px;}
   .susbtn{font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--dim);cursor:pointer;}
   .susbtn:hover{color:var(--ink);}
+
+  .paxis{margin-bottom:16px;}
+  .popt{display:inline-block;font-size:13px;font-style:italic;color:var(--dim);
+    border:1px solid #3a3020;padding:5px 12px;margin:0 6px 6px 0;cursor:pointer;transition:all .2s;}
+  .popt:hover{color:var(--ink);border-color:#6a5a3c;}
+  .popt.sel{color:#c9b463;border-color:#c9b463;background:rgba(201,180,99,.07);}
+  .gopt:disabled{cursor:default;}
   .gq h3{font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:#c9b463;
     font-weight:normal;margin-bottom:4px;}
   #voicebtn{margin-top:18px;background:none;border:none;color:var(--dim);font-family:inherit;
@@ -184,8 +191,8 @@
     <p class="on"><b>drag to push things around.</b> you are weak while they move and strong while they rest. wait for sitting, or night.</p>
     <p class="on"><b>press and hold on a thing to examine it.</b> hold still until the gold ring closes &mdash; it is quick while they rest, slow while they move. everything you learn goes in the <b>pocket book</b> (top right).</p>
     <p class="on"><b>examine again at night.</b> in the blue light, every object gives up one extra secret. the pocket book keeps those too.</p>
-    <p class="on"><b>the mystery:</b> the pocket book shows four possible people. only one is really them. use your clues to rule people out &mdash; at the end of the week, you pick your answer.</p>
-    <p class="on"><b>daily tasks</b> (top right) are small challenges &mdash; catching things mid-air, cornering the lint-moth, keeping the pocket safe. each one earns a <b>thread</b>, and threads make the pocket whisper wrong suspects away at the final answer.</p>
+    <p class="on"><b>the mystery:</b> you must build their profile from scratch &mdash; one occupation, one secret, one walk &mdash; chosen in the pocket book from all the possibilities. commit at the end of the week. guessing blind almost never works; evidence does.</p>
+    <p class="on"><b>the thimble</b> (brass, left seam) is your instrument. drag any object onto it and it reads what the thing knows &mdash; work-junk betrays the job, story-objects betray the secret, and <b>any reading taken at night reveals the walk</b>. it only reads twice a day, and junk wastes a charge. choose well. true readings earn <b>threads</b>, and every 3 threads crosses one wrong answer off your final choices.</p>
     <p class="on"><b>the hole</b> sits in the bottom seam, right under where everything piles &mdash; it breathes in whatever is small enough, and it grows every day. drag things away, <b>rub it to stitch it tighter</b>, or lay something too big to fit on top of it as a plug.</p>
     <p class="on"><b>the fingers</b> dive in hunting for things. leave the thing where they can find it &mdash; or hide it in <b>the dark corner</b>, low on the left, where they never search. both choices change the story.</p>
     <p class="on"><b>the week bites back.</b> pickpockets go for your best thing (shove a coin into their path as a decoy). wash day ruins unprotected paper. a grub may sneak in and eat the evidence &mdash; throw it out the mouth, or feed it to the hole. and <b>chewed gum patches the hole; the lighter, held against a thing, makes it confess early.</b></p>

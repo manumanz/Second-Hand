@@ -220,6 +220,18 @@
       case 'examined':
         examine(ev.it);
         break;
+      case 'readingStart':
+        if (!narrate.thimbleShown) {
+          narrate.thimbleShown = true;
+          toast('the thimble takes hold of it, and listens…', true, 3000);
+        }
+        break;
+      case 'reading':
+        doReading(ev.it);
+        break;
+      case 'thimbleSpent':
+        toast('the thimble is spent for today. it reads twice a day, no more.');
+        break;
       case 'gummed':
         toast('the gum seals the hole shut. it will dry and peel, but for now — peace.');
         if (g.impact) g.impact.push('day ' + (dayIdx + 1) + ': you gummed the hole shut.');
@@ -267,15 +279,8 @@
         toast('the moth found the way out. gone.');
         break;
       case 'mothCaught':
-        toast('caught. the moth becomes lint, the lint becomes a thread.');
         Audio2.blip(990, 0.4, 0.03, 'triangle');
-        completeTask('moth');
-        break;
-      case 'caught':
-        completeTask('catch');
-        break;
-      case 'heldstill':
-        completeTask('still');
+        addThread('the moth, caught');
         break;
       case 'plugged':
         toast(ev.label + ' is lying across the hole. nothing gets past it. remember that trick.', true, 6500);
@@ -362,7 +367,7 @@
         }
         else if (ev.result === 'returned') toast(ev.label + ' — used, and put back.');
         else if (ev.result === 'peeked') toast(ev.label + ' — held, considered, put back.');
-        if (!m && (ev.result === 'took' || ev.result === 'miss')) completeTask('choice');
+        if (!m && (ev.result === 'took' || ev.result === 'miss')) addThread('a story moment, decided');
         break;
       }
     }
@@ -372,42 +377,58 @@
      every finished task = one thread. threads make the pocket talk
      at the final lineup. this is how watching, examining, hiding and
      mending all feed the same goal: knowing who they are. */
-  function genTasks(resolved) {
-    // skill tasks first — threads should be earned, not clicked
-    const pool = [
-      { id: 'moth', text: 'a lint-moth visits today. corner it and catch it' },
-      { id: 'catch', text: 'catch something in mid-air, before it lands' },
-      { id: 'still', text: 'hold a thing dead still for five seconds while they are moving' },
-      { id: 'stack', text: 'leave one thing balanced on top of another at day’s end' },
-      { id: 'protect', text: 'let nothing fall through the hole today' },
-    ];
-    if (dayIdx >= 1) pool.push({ id: 'night', text: 'get a secret out of something at night' });
-    if (resolved.hands.some(h => h.minor))
-      pool.push({ id: 'fare', text: 'make sure the fingers find a coin today' });
-    const tasks = SH.shuffle(g.rng, pool).slice(0, resolved.hands.some(h => !h.minor && h.action === 'take') ? 2 : 3);
-    if (resolved.hands.some(h => !h.minor && h.action === 'take'))
-      tasks.unshift({ id: 'choice', text: 'the fingers come hunting today. make your call — help them, or hide it' });
-    g.tasks = tasks.map(t => ({ id: t.id, text: t.text, done: false }));
-    renderTasks();
-  }
-
-  function completeTask(id) {
-    if (!g || !g.tasks) return;
-    const t = g.tasks.find(x => x.id === id && !x.done);
-    if (!t) return;
-    t.done = true;
+  /* threads are earned by real detective work: hot readings from the thimble,
+     the moth, and the story-hand moments. they buy eliminations at the end. */
+  function addThread(why) {
     g.threads = (g.threads || 0) + 1;
-    toast('✓ ' + t.text + ' — a loose thread earned.');
+    toast('✓ ' + why + ' — a loose thread earned (' + g.threads + ').');
     Audio2.blip(880, 0.3, 0.025, 'triangle');
     renderTasks();
   }
 
   function renderTasks() {
-    if (!g || !g.tasks) { $('tasklist').innerHTML = ''; $('threadct').textContent = ''; return; }
+    if (!g) { $('tasklist').innerHTML = ''; $('threadct').textContent = ''; return; }
     $('threadct').textContent = 'threads: ' + (g.threads || 0);
-    $('tasklist').innerHTML = g.tasks
-      .map(t => '<div class="task' + (t.done ? ' done' : '') + '">' + (t.done ? '✓ ' : '· ') + t.text + '</div>')
-      .join('');
+    const left = SH.Sim.thimbleLeft || 0;
+    $('tasklist').innerHTML =
+      '<div class="task">the thimble: ' + (left > 0 ? left + ' reading' + (left > 1 ? 's' : '') + ' left today' : 'spent for today') + '</div>' +
+      '<div class="task">drag a thing onto the thimble to test it</div>';
+  }
+
+  /* what the thimble says about a tested thing */
+  function doReading(it) {
+    const rr = Math.random;
+    const night = SH.Sim.lightCol === 'blue';
+    let axis = null, text = null, hot = false;
+    if (it.type === 'grub') {
+      text = 'it is alive. it is nobody’s. the thimble asks you to remove it.';
+    } else if (night) {
+      // at night the thimble reads the day itself out of anything
+      axis = 'walk'; hot = true;
+      text = SH.READINGS.walk[g.truth.walk];
+    } else if (it.type === g.arc.keyType || (SH.ARC_HOT[g.arc.id] || []).includes(it.type)) {
+      axis = 'matter'; hot = true;
+      const p = SH.READINGS.matter[g.truth.matter];
+      text = p[Math.floor(rr() * p.length)];
+    } else if (g.fillerTypes.includes(it.type)) {
+      axis = 'work'; hot = true;
+      const p = SH.READINGS.work[g.truth.work];
+      text = p[Math.floor(rr() * p.length)];
+    } else {
+      text = SH.READINGS.cold[Math.floor(rr() * SH.READINGS.cold.length)];
+    }
+    g.readings.push({ day: dayIdx + 1, label: it.label, text, hot });
+    // show it like a small séance
+    $('exam').querySelector('.xname').textContent = 'the thimble reads: ' + it.label;
+    $('exam').querySelector('.xdesc').textContent = text;
+    $('exam').querySelector('.xread').textContent = hot ? 'that is a real clue. it is in the pocket book.' : '';
+    $('exam').querySelector('.xnight').textContent = '';
+    $('exam').classList.add('on');
+    clearTimeout(examTimer);
+    examTimer = setTimeout(() => $('exam').classList.remove('on'), 8000);
+    Audio2.blip(hot ? 523 : 220, 0.8, 0.035, 'sine');
+    if (hot) addThread('a true reading');
+    renderTasks();
   }
 
   /* ---------------- examining + the pocket book ---------------- */
@@ -441,13 +462,10 @@
     if (freshNight) {
       toast('a confession, by moonlight. the pocket book keeps it.');
       Audio2.blip(392, 0.6, 0.03, 'sine');
-      completeTask('night');
     } else if (fresh) {
       toast('logged in the pocket book: ' + it.label + '.');
       Audio2.blip(660, 0.25, 0.03, 'triangle');
     }
-    if (fresh) completeTask('examine-new');
-    if (SH.Sim.actName === 'sit' || SH.Sim.actName === 'night') completeTask('watch');
     updateJrnBtn();
   }
 
@@ -471,22 +489,29 @@
     if (g.journal[key]) html += '<div class="jentry">the matter at hand: <i>' + SH.ITEM_DEFS[key].read + '</i></div>';
     else html += '<div class="jentry junk">the matter at hand: not worked out yet.</div>';
 
-    // the suspect board
-    html += '<h3>who might they be?</h3>';
-    html += '<div class="jentry junk" style="margin-bottom:10px">one of these four is them. use the evidence. you answer at the end of the week.</div>';
-    for (const s of g.suspects) {
-      const struck = g.suspectStruck[s.id], picked = g.suspectPick === s.id;
-      html += '<div class="sus' + (struck ? ' out' : '') + (picked ? ' pick' : '') + '" data-sid="' + s.id + '">' +
-        '<div class="susname">' + s.name + (picked ? ' — your pick' : '') + '</div>' +
-        '<div class="suslines">' +
-        '<div class="susline"><span>occupation</span>' + s.occP + '</div>' +
-        '<div class="susline"><span>secret</span>' + s.matP + '</div>' +
-        '<div class="susline"><span>the walk</span>' + s.walkP + '</div>' +
-        '</div>' +
-        '<div class="susbtns">' +
-        '<span class="susbtn" data-act="pick" data-sid="' + s.id + '">' + (picked ? 'unpick' : 'this is them') + '</span>' +
-        '<span class="susbtn" data-act="strike" data-sid="' + s.id + '">' + (struck ? 'un-rule out' : 'rule out') + '</span>' +
-        '</div></div>';
+    // the profile board: assemble the person, axis by axis
+    html += '<h3>the profile</h3>';
+    html += '<div class="jentry junk" style="margin-bottom:10px">build them from evidence: one job, one secret, one walk. you commit at the end of the week.</div>';
+    const AXES = [
+      ['work', 'occupation', SH.GUESSES.work],
+      ['matter', 'the secret', SH.GUESSES.matter],
+      ['walk', 'the walk', SH.GUESSES.walk],
+    ];
+    for (const [axis, label, opts] of AXES) {
+      html += '<div class="paxis"><div class="susname">' + label + '</div>';
+      for (const o of opts) {
+        const sel = g.profile[axis] === o.id;
+        html += '<span class="popt' + (sel ? ' sel' : '') + '" data-axis="' + axis + '" data-oid="' + o.id + '">' + o.line + '</span>';
+      }
+      html += '</div>';
+    }
+    // the thimble's testimony so far
+    html += '<h3>the thimble’s readings</h3>';
+    if (g.readings.length) {
+      for (const rd of g.readings.slice(-8))
+        html += '<div class="jentry' + (rd.hot ? '' : ' junk') + '">day ' + rd.day + ', ' + rd.label + ': <i>' + rd.text + '</i></div>';
+    } else {
+      html += '<div class="jentry junk">nothing tested yet. drag a thing onto the brass thimble (left seam) and it will read what the thing knows. twice a day. spend it well.</div>';
     }
     html += '<h3>what changed because of you</h3>';
     if (g.impact && g.impact.length) {
@@ -513,17 +538,11 @@
     if (unexamined) html += '<div class="jentry junk">' + unexamined + ' thing' + (unexamined > 1 ? 's' : '') + ' still unexamined, down in the dark.</div>';
     if (!any && !unexamined) html += '<div class="jentry junk">nothing yet. the pocket is young.</div>';
     $('jwrap').innerHTML = html;
-    // wire the suspect buttons
-    for (const b of $('jwrap').querySelectorAll('.susbtn')) {
+    // wire the profile options
+    for (const b of $('jwrap').querySelectorAll('.popt')) {
       b.addEventListener('click', () => {
-        const sid = +b.dataset.sid;
-        if (b.dataset.act === 'pick') {
-          g.suspectPick = (g.suspectPick === sid) ? null : sid;
-          delete g.suspectStruck[sid];
-        } else {
-          g.suspectStruck[sid] = !g.suspectStruck[sid];
-          if (g.suspectPick === sid) g.suspectPick = null;
-        }
+        const axis = b.dataset.axis, oid = b.dataset.oid;
+        g.profile[axis] = (g.profile[axis] === oid) ? null : oid;
         buildJournal();
       });
     }
@@ -792,11 +811,12 @@
     state = 'card';
     $('hud').classList.add('hidden');
     resolved = SH.resolveDay(g, dayIdx);
-    // an inherited coat: the last stranger's leavings are already inside
+    // an inherited coat: the last stranger's leavings are already inside.
+    // no spoilers — from the rail, everyone looks like somebody. up close, nobody does.
     if (dayIdx === 0 && g.inherit) {
       resolved.lines.unshift(
-        'new hands chose me off the rail today: ' + g.inherit.owner + '.',
-        'the last one’s things are still in me. everything gets inherited eventually.');
+        'new hands lifted me off the rail today. i thought i had them figured from a distance. i was wrong. i always am.',
+        'the last one’s things are still in me. everything gets inherited eventually. begin again.');
       for (const t of g.inherit.types.slice(0, 6))
         resolved.drops.push({ f: SH.rf(g.rng, .05, .5), type: t });
       resolved.drops.sort((a, b) => a.f - b.f);
@@ -812,13 +832,11 @@
       resolved.hands.push({ f: SH.rf(g.rng, 0.25, 0.8), thief: true, action: 'take' });
       resolved.hands.sort((a, b) => a.f - b.f);
     }
-    if (g.lastDayAllDone)
-      resolved.lines.push('(you kept busy yesterday. the pocket remembers: ' + g.threads + ' threads now.)');
     showCard(resolved.header, resolved.lines, () => {
       const segs = buildSchedule(g, resolved.mods);
       const dur = segs.reduce((s, x) => s + x.dur, 0);
       SH.Sim.startDay(resolved, dayIdx, segs, dur);
-      genTasks(resolved);
+      renderTasks();
       $('daylabel').textContent = resolved.header.toLowerCase();
       $('hud').classList.remove('hidden');
       state = 'day';
@@ -829,19 +847,6 @@
 
   function endOfDay() {
     if (dayIdx === 0) tut.finish();
-    if (SH.Sim.dayLost === 0) completeTask('protect');
-    // is anything balanced on anything?
-    const rest = g.items.filter(it => it.fate === 'in-pocket' && it.body && !it.def.chain);
-    outer:
-    for (const a of rest) {
-      for (const b of rest) {
-        if (a === b) continue;
-        const dx = Math.abs(a.body.position.x - b.body.position.x);
-        const dy = b.body.position.y - a.body.position.y; // a above b
-        if (dx < 26 && dy > 10 && dy < 48) { completeTask('stack'); break outer; }
-      }
-    }
-    g.lastDayAllDone = !!(g.tasks && g.tasks.every(t => t.done));
     g.mood = Math.max(0, (g.mood || 0) - 1); // sleep softens most tempers
     dayIdx++;
     if (dayIdx < 7) { startDayCard(); return; }
@@ -851,41 +856,48 @@
     showGuess();
   }
 
-  /* the deduction: pick your suspect from the lineup */
+  /* the deduction, blair-style: commit to a full profile — job, secret, walk */
   function showGuess() {
     const box = $('gsuspects');
     box.innerHTML = '';
-    // the threads pay off: enough of them and the pocket whispers
-    const whispers = [];
-    const wrong = g.suspects.filter(s => !s.correct && !g.suspectStruck[s.id]);
-    let nW = 0;
-    if ((g.threads || 0) >= 9) nW = 2; else if ((g.threads || 0) >= 5) nW = 1;
-    for (let i = 0; i < nW && wrong.length; i++) {
-      const s = wrong.splice(Math.floor(Math.random() * wrong.length), 1)[0];
-      g.suspectStruck[s.id] = true;
-      whispers.push(s.name);
+    // threads buy eliminations: every 3 threads, one wrong option goes dark
+    const elimN = Math.min(5, Math.floor((g.threads || 0) / 3));
+    const wrongs = [];
+    for (const [axis, opts] of [['work', SH.GUESSES.work], ['matter', SH.GUESSES.matter], ['walk', SH.GUESSES.walk]])
+      for (const o of opts) if (o.id !== g.truth[axis]) wrongs.push(axis + ':' + o.id);
+    const er = SH.mulberry32(g.seed ^ 0xe11);
+    const struck = {};
+    for (let i = 0; i < elimN && wrongs.length; i++) {
+      const w = wrongs.splice(Math.floor(er() * wrongs.length), 1)[0];
+      struck[w] = true;
     }
-    if (whispers.length) {
+    if (elimN > 0) {
       const w = document.createElement('div');
       w.style.cssText = 'font-style:italic;color:#c9b463;font-size:15px;margin-bottom:14px;line-height:1.6;';
-      w.textContent = 'you earned ' + g.threads + ' threads this week. the pocket owes you. it whispers: it is not ' +
-        whispers.join('. and it is not ') + '.';
+      w.textContent = g.threads + ' threads earned. the pocket pays its debts: ' + elimN + ' wrong answer' + (elimN > 1 ? 's have' : ' has') + ' been crossed out for you.';
       box.appendChild(w);
     }
-    g.finalPick = (g.suspectPick !== null && !g.suspectStruck[g.suspectPick]) ? g.suspectPick : null;
-    for (const s of g.suspects) {
-      const b = document.createElement('button');
-      b.className = 'gopt' + (g.finalPick === s.id ? ' sel' : '') + (g.suspectStruck[s.id] ? ' struck' : '');
-      b.innerHTML = '<b>' + s.name + '</b><br>occupation: ' + s.occP + '<br>secret: ' + s.matP + '<br>the walk: ' + s.walkP;
-      b.addEventListener('click', () => {
-        g.finalPick = s.id;
-        for (const c of box.children) if (c.classList) c.classList.remove('sel');
-        b.classList.add('sel');
-        $('guessgo').disabled = false;
-      });
-      box.appendChild(b);
+    const AXES = [['work', 'their occupation'], ['matter', 'their secret'], ['walk', 'their walk']];
+    for (const [axis, label] of AXES) {
+      const h = document.createElement('div');
+      h.className = 'susname';
+      h.style.marginTop = '14px';
+      h.textContent = label;
+      box.appendChild(h);
+      for (const o of SH.GUESSES[axis]) {
+        const dead = struck[axis + ':' + o.id];
+        const b = document.createElement('button');
+        b.className = 'gopt' + (g.profile[axis] === o.id ? ' sel' : '') + (dead ? ' struck' : '');
+        b.textContent = o.line;
+        if (dead) { b.disabled = true; if (g.profile[axis] === o.id) g.profile[axis] = null; }
+        else b.addEventListener('click', () => {
+          g.profile[axis] = o.id;
+          showGuess(); // re-render selections
+        });
+        box.appendChild(b);
+      }
     }
-    $('guessgo').disabled = g.finalPick === null;
+    $('guessgo').disabled = !(g.profile.work && g.profile.matter && g.profile.walk);
     $('guess').classList.remove('hidden');
   }
 
@@ -909,19 +921,27 @@
     $('endseed').textContent = g.seedId;
     const list = $('fatelist');
     list.innerHTML = '';
-    // the verdict on your reading of them
-    if (g.finalPick !== null && g.finalPick !== undefined) {
-      const picked = g.suspects.find(s => s.id === g.finalPick);
-      const truth = g.suspects.find(s => s.correct);
-      const right = picked && picked.correct;
+    // the verdict on your reading of them, axis by axis
+    if (g.profile && g.profile.work) {
+      const rows = [['work', 'occupation'], ['matter', 'secret'], ['walk', 'walk']];
+      let right = 0, html = 'your reading of them:<br>';
+      for (const [axis, label] of rows) {
+        const ok = g.profile[axis] === g.truth[axis];
+        if (ok) right++;
+        const truthLine = SH.GUESSES[axis].find(o => o.id === g.truth[axis]).line;
+        html += label + ' — <span class="' + (ok ? 'fate-kept' : 'fate-lost') + '">' +
+          (ok ? 'right' : 'wrong. truly: ' + truthLine) + '</span><br>';
+      }
+      const VERDICT = [
+        'nothing landed. some people stay strangers. that is allowed.',
+        'one of three. a silhouette, not a person. keep practising.',
+        'two of three. so nearly them that it aches.',
+        'a perfect reading. you would make a very fine pocket.',
+      ];
+      html += '<span style="color:#c9b463">' + VERDICT[right] + '</span>';
       const v = document.createElement('div');
       v.style.marginBottom = '18px';
-      v.innerHTML =
-        'you said it was <b>' + picked.name + '</b> — <span class="' + (right ? 'fate-kept' : 'fate-lost') + '">' +
-        (right ? 'and you were right.' : 'but it was ' + truth.name + '.') + '</span><br>' +
-        '<i>' + truth.blurb + '</i><br>' +
-        '<span style="color:#c9b463">' + (right ? 'you would make a fine pocket.' :
-          'strangers keep their secrets. that is fair too.') + '</span>';
+      v.innerHTML = html;
       list.appendChild(v);
     }
     const FATE = {

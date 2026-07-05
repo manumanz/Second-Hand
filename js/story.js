@@ -27,14 +27,26 @@
   ];
 
   const OCCUPATIONS = [
-    { id: 'office',    sched: 'office',    filler: ['receipt', 'pencap'],   line: 'their days are shaped like desks.' },
-    { id: 'barista',   sched: 'barista',   filler: ['sachet', 'receipt'],   line: 'they smell of coffee and steamed milk by nine.' },
-    { id: 'courier',   sched: 'courier',   filler: ['receipt', 'coin'],     line: 'they cross the whole city twice a day, fast.' },
-    { id: 'student',   sched: 'student',   filler: ['eraser', 'usb'],       line: 'everything is due thursday. everything.' },
-    { id: 'bartender', sched: 'bartender', filler: ['bottlecap', 'napkin'], line: 'they come home when the birds start singing.' },
-    { id: 'gardener',  sched: 'gardener',  filler: ['seedpacket', 'twine'], line: 'there is always soil in my seams. i have stopped minding.' },
-    { id: 'nurse',     sched: 'nurse',     filler: ['pencap', 'gum'],       line: 'they work all night caring for people, and sleep while the world is loud.' },
+    { id: 'office',    sched: 'office',    filler: ['receipt', 'pencap', 'paperclip', 'stub'],      line: 'their days are shaped like desks.' },
+    { id: 'barista',   sched: 'barista',   filler: ['sachet', 'receipt', 'teabag', 'button'],       line: 'they smell of coffee and steamed milk by nine.' },
+    { id: 'courier',   sched: 'courier',   filler: ['receipt', 'battery', 'shoelace', 'coin'],      line: 'they cross the whole city twice a day, fast.' },
+    { id: 'student',   sched: 'student',   filler: ['eraser', 'usb', 'chalk', 'paperclip'],         line: 'everything is due thursday. everything.' },
+    { id: 'bartender', sched: 'bartender', filler: ['bottlecap', 'napkin', 'matchbook', 'stub'],    line: 'they come home when the birds start singing.' },
+    { id: 'gardener',  sched: 'gardener',  filler: ['seedpacket', 'twine', 'acorn', 'pebble'],      line: 'there is always soil in my seams. i have stopped minding.' },
+    { id: 'nurse',     sched: 'nurse',     filler: ['pencap', 'gum', 'plaster', 'hairpin'],         line: 'they work all night caring for people, and sleep while the world is loud.' },
   ];
+
+  /* background junk that says nothing about the job — noise for the mystery */
+  const JUNKPOOL = ['button', 'marble', 'dice', 'feather', 'sweetwrapper', 'acorn', 'pebble',
+    'badge', 'chalk', 'stub', 'shoelace', 'paperclip', 'hairpin', 'battery', 'matchbook',
+    'plaster', 'note', 'gum', 'bottlecap', 'napkin'];
+
+  /* what the arcs shed besides their key item — hot evidence for the thimble */
+  const ARC_HOT = {
+    ring: ['ringbox', 'napkin'], letter: ['stamps', 'photo'], lighter: ['cigpack', 'gum'],
+    pick: ['busticket', 'napkin'], collar: ['treat'], ticket: ['photo', 'key', 'twine'],
+  };
+  SH.ARC_HOT = ARC_HOT;
 
   const NEW_OWNERS = [
     'a night-shift cleaner who liked the colour',
@@ -75,6 +87,23 @@
     note:       ['a note that says “milk, bulbs, call m.” all three, they decide, still apply.'],
     twine:      ['a piece of green string. it will hold something up. it always does.'],
     grub:       ['a small dried grub. the new owner decides not to ask.'],
+    button:     ['a loose button that fits their favourite shirt exactly. some coats apologise in advance.'],
+    marble:     ['a green marble. it lives on their windowsill now, holding its little storm.'],
+    dice:       ['one die. they roll it to pick dinner. it has never once been wrong.'],
+    feather:    ['a grey feather. it goes in a book, page ninety-one, for no reason anyone can name.'],
+    matchbook:  ['a matchbook from “the little owl”. they go. they ask for the corner table.'],
+    plaster:    ['a plaster, still wrapped. two days later, a stranger’s scraped knee. prepared people happen to other people.'],
+    paperclip:  ['a paperclip halfway to being a hook. they finish the job.'],
+    hairpin:    ['a hairpin that was never theirs and is now nobody’s. it stays anyway.'],
+    battery:    ['a battery. the kitchen clock starts again, three years slow.'],
+    sweetwrapper: ['an empty sweet wrapper that smells of lemon sherbet and someone’s grandmother.'],
+    acorn:      ['an acorn. it gets planted in a yoghurt pot, which is how forests actually start.'],
+    pebble:     ['a smooth pebble from some water somewhere. it becomes a paperweight with a past.'],
+    badge:      ['a pin badge with the pin bent back into service. an opinion, re-worn.'],
+    teabag:     ['one emergency teabag. it saves an afternoon, exactly as designed.'],
+    chalk:      ['a stub of chalk. a hopscotch grid appears where no hopscotch grid has been for years.'],
+    stub:       ['a cinema stub, seat J14. they see the same film. they sit in J15.'],
+    shoelace:   ['a spare shoelace. within the month, it is a hero.'],
     ring:       ['a ring. see below.'],
     tag:        ['a collar tag. see below.'],
     letter:     ['a letter. see below.'],
@@ -500,6 +529,40 @@
   SH.GUESSES = {
     work: OCCUPATIONS.map(o => ({ id: o.id, line: WORKP[o.id] })),
     matter: ARCS.map(a => ({ id: a.id, line: MATTERP[a.id] })),
+    walk: MOTIONS.map(m => ({ id: m.id, line: WALKP[m.id] })),
+  };
+
+  /* what the thimble says when an item is pressed into it. cryptic on purpose. */
+  SH.READINGS = {
+    work: {
+      office:    ['the thimble taps like a keyboard. this thing has lived under flat white light.', 'a tidy, flat hum. desks. definitely desks.'],
+      barista:   ['warm. it wakes up far too early in the morning.', 'the thimble reads steam and burnt sugar off this one.'],
+      courier:   ['it buzzes like tired legs and ten postcodes.', 'a fast pulse. this thing has crossed the whole city, more than once.'],
+      student:   ['it flutters like a deadline at three in the morning.', 'cheap ink and borrowed time, says the thimble.'],
+      bartender: ['it rings faintly — glass against glass, near closing time.', 'late hours cling to this. loud, late hours.'],
+      gardener:  ['the thimble comes back with soil under its nail. patience. growth.', 'it hums slow and green.'],
+      nurse:     ['a steady beat, like machines that watch over sleeping people.', 'clean hands and long quiet corridors, says the thimble.'],
+    },
+    matter: {
+      ring:    ['the thimble trembles. a promise is circling this pocket.', 'it rings like a tiny bell in a very big church.'],
+      letter:  ['old words. the thimble tastes paper and regret.', 'it sighs. something unsaid is pressing on everything in here.'],
+      lighter: ['heat, then shame, then heat again. there is a war on.', 'the thimble flinches away from a small fire.'],
+      pick:    ['it thrums like a chord. a big friday is coming.', 'stage-light nerves, all over this thing.'],
+      collar:  ['soft fur and a name that is wrong. the thimble purrs anyway.', 'it reads: loved — but already spoken for.'],
+      ticket:  ['it points north and will not stop pointing.', 'departure. everything about this leans toward a train.'],
+    },
+    walk: {
+      fidgety: 'even at rest, the day’s echo vibrates. the owner cannot keep still.',
+      calm:    'the day settles evenly, like silt. the owner moves like slow water.',
+      heavy:   'the day left deep prints in this. heavy steps, heavy heart.',
+      quick:   'everything about today arrived breathless. the owner is forever six minutes behind.',
+      tired:   'a long, dragging echo. worn-out legs carried this day.',
+    },
+    cold: [
+      'nothing. this thing is nobody’s clue.',
+      'the thimble is silent. junk, then — or a very good liar.',
+      'it shrugs. some things are just things.',
+    ],
   };
 
   /* =======================================================================
@@ -537,26 +600,14 @@
       },
     };
 
-    /* the suspect board: four possible people. one is real.
-       one decoy is a TWIN — same job, same secret, different walk —
-       so the items alone can never settle it. you have to watch them move. */
-    const works = SH.shuffle(r, OCCUPATIONS.map(o => o.id).filter(id => id !== occ.id));
-    const matters = SH.shuffle(r, ARCS.map(a => a.id).filter(id => id !== arc.id));
-    const walks = SH.shuffle(r, MOTIONS.map(m => m.id).filter(id => id !== motion.id));
-    const raw = [
-      { work: occ.id,   matter: arc.id,     walk: motion.id, correct: true },
-      { work: occ.id,   matter: arc.id,     walk: walks[0],  correct: false }, // the twin
-      { work: works[0], matter: arc.id,     walk: motion.id, correct: false }, // wrong job
-      { work: occ.id,   matter: matters[0], walk: walks[1],  correct: false }, // wrong secret
-    ];
-    const NAMES = ['person one', 'person two', 'person three', 'person four'];
-    g.suspects = SH.shuffle(r, raw).map((s, i) => ({
-      id: i, name: NAMES[i], work: s.work, matter: s.matter, walk: s.walk, correct: s.correct,
-      occP: WORKP[s.work], matP: MATTERP[s.matter], walkP: WALKP[s.walk],
-      blurb: 'someone who ' + WORKP[s.work] + ', who ' + MATTERP[s.matter] + ', and who ' + WALKP[s.walk] + '.',
-    }));
-    g.suspectPick = null;
-    g.suspectStruck = {};
+    /* per-stranger variety: which two work-clues their job actually sheds,
+       and which background junk this particular week contains */
+    g.fillerTypes = SH.shuffle(r, occ.filler).slice(0, 2);
+    g.junkPool = SH.shuffle(r, JUNKPOOL).slice(0, 8);
+    /* the profile the player must assemble, blair-style: three axes, chosen independently */
+    g.profile = { work: null, matter: null, walk: null };
+    g.truth = { work: occ.id, matter: arc.id, walk: motion.id };
+    g.readings = [];
     return g;
   };
 
@@ -581,7 +632,11 @@
     const r = g.rng;
     const nCoins = ri(r, 0, 2);
     for (let i = 0; i < nCoins; i++) drops.push({ f: rf(r, .1, .9), type: 'coin' });
-    if (r() < .5) drops.push({ f: rf(r, .15, .85), type: pick(r, g.occ.filler) });
+    // work-junk: the two clue types this job actually sheds
+    if (r() < .5) drops.push({ f: rf(r, .15, .85), type: pick(r, g.fillerTypes) });
+    // background junk: this week's own strange weather of small things
+    if (r() < .75) drops.push({ f: rf(r, .1, .9), type: pick(r, g.junkPool) });
+    if (r() < .4) drops.push({ f: rf(r, .1, .9), type: pick(r, g.junkPool) });
     if (n === 1 && r() < .8) drops.push({ f: rf(r, .2, .8), type: 'earbuds' });
     drops.sort((a, b) => a.f - b.f);
     // everyday rummages: the fingers come counting bus money most days

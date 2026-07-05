@@ -46,6 +46,12 @@
     return sim.holeR * (1 - 0.5 * sim.mend);
   };
 
+  /* the thimble: an old brass thimble caught in the lining — the pocket's one
+     instrument. press a thing into it and it reads what the thing knows. */
+  sim.thimbleC = { x: 238, y: 660 };
+  sim.thimbleLeft = 2;
+  sim.reading = null;
+
   /* the dark corner: a lint-drift low on the left where the fingers never think to check */
   sim.hideC = { x: 284, y: 890 };
   sim.isHidden = function (it) {
@@ -144,6 +150,8 @@
     sim.crisisAt = ex.crisisF ? ex.crisisF * durSec : null;
     sim.crisisType = ex.crisisType || null;
     if (ex.grub) sim.grubAt = SH.rf(sim.g.rng, 0.2, 0.5) * durSec; else sim.grubAt = null;
+    sim.thimbleLeft = 2;
+    sim.reading = null;
     sim.setSeg(0);
   };
 
@@ -497,8 +505,8 @@
     if (it) sim.examCh = { it, t: 0, sx: wx, sy: wy };
   };
   sim.releaseGrip = function () {
-    // letting go of chewed gum on the hole = a sticky patch
     const it = sim.dragIt;
+    // letting go of chewed gum on the hole = a sticky patch
     if (it && it.type === 'gum' && it.fate === 'in-pocket' && it.body &&
         Math.hypot(it.body.position.x - sim.holeC.x, it.body.position.y - sim.holeC.y) < sim.holeR + 16) {
       Composite.remove(sim.world, it.body);
@@ -507,9 +515,38 @@
       sim.gumPatch = 55;
       sim.events.push({ type: 'gummed' });
     }
+    // pressing a thing into the thimble = a reading (if it has charge left)
+    else if (it && it.fate === 'in-pocket' && it.body && !it.def.chain && !sim.reading &&
+        Math.hypot(it.body.position.x - sim.thimbleC.x, it.body.position.y - sim.thimbleC.y) < 52) {
+      if (sim.thimbleLeft > 0) {
+        sim.reading = { it, t: 0 };
+        sim.events.push({ type: 'readingStart', it });
+      } else {
+        sim.events.push({ type: 'thimbleSpent' });
+      }
+    }
     sim.dragIt = null;
     sim.examCh = null;
   };
+
+  /* the reading: the thimble holds the thing for a moment, then speaks */
+  function updateReading(dt) {
+    const rd = sim.reading;
+    if (!rd) return;
+    if (rd.it.fate !== 'in-pocket' || !rd.it.body) { sim.reading = null; return; }
+    rd.t += dt;
+    // the thimble holds its subject close
+    Body.setPosition(rd.it.body, {
+      x: rd.it.body.position.x + (sim.thimbleC.x + 14 - rd.it.body.position.x) * 0.12,
+      y: rd.it.body.position.y + (sim.thimbleC.y - rd.it.body.position.y) * 0.12,
+    });
+    Body.setVelocity(rd.it.body, { x: 0, y: 0 });
+    if (rd.t > 2.2) {
+      sim.thimbleLeft--;
+      sim.events.push({ type: 'reading', it: rd.it });
+      sim.reading = null;
+    }
+  }
 
   sim.pointerMove = function (wx, wy, down) {
     const p = sim.pointer;
@@ -784,6 +821,7 @@
     }
     updateGrip(dt);
     updateExam(dt);
+    updateReading(dt);
     updateHand(dt);
     updateHole(dt);
     updateMoth(dt);

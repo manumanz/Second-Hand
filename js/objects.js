@@ -324,6 +324,144 @@
     make: null, geom: () => ({}), detail() {},
   });
 
+  /* ---------- the wider world of pocket junk ---------- */
+  def('button', {
+    label: 'a loose button', mat: 'plastic', passSize: 9,
+    make: CIRC(9, { density: 0.0015 }),
+    geom: () => ({ outline: ptsCircle(9, 14) }),
+    detail(ctx) { for (const [hx, hy] of [[-2.5, -2.5], [2.5, -2.5], [-2.5, 2.5], [2.5, 2.5]]) { ctx.beginPath(); ctx.arc(hx, hy, 1.2, 0, Math.PI * 2); ctx.stroke(); } },
+    desc: 'four holes, thread still in two of them.', read: 'somewhere, a shirt is short one button and nobody has noticed yet.',
+    night: 'the thread through it is a colour they no longer wear.',
+  });
+  def('marble', {
+    label: 'a glass marble', mat: 'metal', passSize: 9,
+    make: CIRC(9, { density: 0.004, restitution: 0.5, friction: 0.05 }),
+    geom: () => ({ outline: ptsCircle(9, 16) }),
+    detail(ctx) { ctx.beginPath(); ctx.arc(-2, -2, 3.5, 0.6, 2.4); ctx.stroke(); },
+    desc: 'green glass with a twist of white inside, like trapped smoke.', read: 'adults do not buy marbles. adults keep marbles. there is a difference, and it matters.',
+    night: 'hold it to the moon: the smoke inside looks exactly like a tiny storm.',
+  });
+  def('dice', {
+    label: 'a single die', mat: 'plastic', passSize: 10,
+    make: RECT(14, 14, { density: 0.002, restitution: 0.4 }),
+    geom: () => ({ outline: ptsRRect(14, 14, 3) }),
+    detail(ctx) { ctx.beginPath(); ctx.arc(0, 0, 1.4, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(-3.5, -3.5, 1.2, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(3.5, 3.5, 1.2, 0, Math.PI * 2); ctx.stroke(); },
+    desc: 'one die, missing its twin.', read: 'people who carry a die let it make their small decisions. watch for coin flips too.',
+    night: 'it has landed on five in here nine times today. nobody saw any of them.',
+  });
+  def('feather', {
+    label: 'a small feather', mat: 'organic', passSize: 8,
+    make: (x, y) => Bodies.rectangle(x, y, 26, 8, { density: 0.0003, frictionAir: 0.09, friction: 0.4, restitution: 0.1 }),
+    geom: () => ({ outline: subdiv([[-13, 0], [-6, -4], [4, -3.5], [13, -0.5], [4, 3], [-6, 3.5]], 3) }),
+    detail(ctx) { ctx.beginPath(); ctx.moveTo(-13, 0); ctx.lineTo(11, -0.5); ctx.stroke(); },
+    desc: 'grey, curved, weightless.', read: 'either they stopped to pick up a feather, or a bird got very close. both are worth knowing.',
+    night: 'it moves in air the pocket cannot feel. dreaming of the wing, probably.',
+  });
+  def('matchbook', {
+    label: 'a matchbook', mat: 'paper', passSize: 12,
+    make: RECT(24, 18, { density: 0.001 }),
+    geom: () => ({ outline: ptsRRect(24, 18, 2) }),
+    detail(ctx) { ctx.beginPath(); ctx.moveTo(-12, 5); ctx.lineTo(12, 5); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-8, -5); ctx.lineTo(-8, 3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-4, -5); ctx.lineTo(-4, 3); ctx.stroke(); },
+    desc: 'a matchbook from a bar called “the little owl”. three matches left.', read: 'people keep matchbooks as bookmarks for good nights.',
+    night: 'inside the flap, in biro: a name, and under it, “ask for the corner table.”',
+  });
+  def('plaster', {
+    label: 'a bandage plaster', mat: 'paper', passSize: 10,
+    make: RECT(26, 10, { density: 0.0007 }),
+    geom: () => ({ outline: ptsRRect(26, 10, 4) }),
+    detail(ctx) { for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.arc(i * 3, 0, 0.7, 0, Math.PI * 2); ctx.stroke(); } },
+    desc: 'still in its wrapper, a little bent.', read: 'carried for someone else, most likely. people who carry plasters expect the world to scrape somebody.',
+    night: 'the wrapper is worn soft. it has been offered and refused at least once.',
+  });
+  def('paperclip', {
+    label: 'a paperclip', mat: 'metal', passSize: 8,
+    make: RECT(20, 8, { density: 0.002 }),
+    geom: () => ({ outline: subdiv([[-10, -3], [10, -3], [10, 3], [-10, 3]], 3) }),
+    detail(ctx) { ctx.beginPath(); ctx.moveTo(-7, -1); ctx.lineTo(7, -1); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-7, 1.5); ctx.lineTo(5, 1.5); ctx.stroke(); },
+    desc: 'bent halfway to being a hook.', read: 'paperclips in pockets are always mid-transformation into something else.',
+    night: 'whatever it once held together has long been apart.',
+  });
+  def('hairpin', {
+    label: 'a hairpin', mat: 'metal', passSize: 8,
+    make: RECT(24, 6, { density: 0.002 }),
+    geom: () => ({ outline: subdiv([[-12, -2], [12, -2], [12, 1], [-12, 2.5]], 3) }),
+    detail(ctx) { ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(9, -0.5); ctx.stroke(); },
+    desc: 'a plain black hairpin, slightly sprung.', read: 'hairpins migrate. this one may not even be theirs. pockets collect other people’s small habits.',
+    night: 'it smells faintly of someone’s shampoo. not the owner’s.',
+  });
+  def('battery', {
+    label: 'a battery', mat: 'metal', passSize: 11,
+    make: RECT(12, 22, { density: 0.005 }),
+    geom: () => ({ outline: ptsRRect(12, 22, 2) }),
+    detail(ctx) { ctx.beginPath(); ctx.moveTo(-2, -11); ctx.lineTo(2, -11); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-3, 2); ctx.lineTo(3, 2); ctx.stroke(); },
+    desc: 'double-a. charge unknown.', read: 'carried batteries mean something at home is half-dead and half-remembered.',
+    night: 'press it to your tongue, people say. the pocket has no tongue and remains curious.',
+  });
+  def('sweetwrapper', {
+    label: 'a sweet wrapper', mat: 'paper', passSize: 8,
+    make: RECT(18, 12, { density: 0.0004, frictionAir: 0.05 }),
+    geom: r => { const rr = r || Math.random; return { outline: ptsRRect(18, 12, 2).map(([x, y]) => [x + SH.rf(rr, -1.5, 1.5), y + SH.rf(rr, -1.5, 1.5)]) }; },
+    detail(ctx) { ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(-13, -3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(13, 3); ctx.stroke(); },
+    desc: 'twisted at both ends, empty, kept.', read: 'the sweet is gone but the wrapper stayed. souvenirs choose themselves.',
+    night: 'lemon sherbet, by the ghost of the smell. a grandmother’s flavour.',
+  });
+  def('acorn', {
+    label: 'an acorn', mat: 'organic', passSize: 9,
+    make: CIRC(8, { density: 0.002 }),
+    geom: () => ({ outline: subdiv([[7, 2], [4, 7], [-3, 8], [-7, 3], [-7, -3], [-3, -7], [4, -6], [8, -2]], 2) }),
+    detail(ctx) { ctx.beginPath(); ctx.arc(0, -5, 4.5, 3.4, 6); ctx.stroke(); },
+    desc: 'brown, capped, satisfying to hold.', read: 'nobody needs an acorn. everybody picks one up. the hand decides before the head does.',
+    night: 'inside it, very quietly, is an entire tree waiting its turn.',
+  });
+  def('pebble', {
+    label: 'a smooth pebble', mat: 'organic', passSize: 10,
+    make: CIRC(10, { density: 0.006 }),
+    geom: () => ({ outline: subdiv([[10, 1], [6, 6], [-2, 8], [-9, 4], [-10, -2], [-5, -7], [3, -8], [9, -4]], 2) }),
+    detail() {},
+    desc: 'flat, grey, worn perfectly smooth by some water somewhere.', read: 'beach or riverbank — they stood by water recently, long enough to choose a stone.',
+    night: 'it is still a little cold, the way the sea leaves things.',
+  });
+  def('badge', {
+    label: 'a pin badge', mat: 'metal', passSize: 9,
+    make: CIRC(10, { density: 0.003 }),
+    geom: () => ({ outline: ptsCircle(10, 14) }),
+    detail(ctx) { ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-3, 1); ctx.lineTo(0, 3.5); ctx.lineTo(4, -2.5); ctx.stroke(); },
+    desc: 'a small enamel badge, pin bent. some band, some cause, some joke.', read: 'badges are opinions you can take off. this one came off.',
+    night: 'the front is worn from being touched — checked, like a small anchor.',
+  });
+  def('teabag', {
+    label: 'a teabag', mat: 'paper', passSize: 10,
+    make: RECT(16, 18, { density: 0.0008 }),
+    geom: () => ({ outline: ptsRRect(16, 18, 2) }),
+    detail(ctx) { ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(4, -14); ctx.stroke(); ctx.beginPath(); ctx.arc(5, -15, 1.5, 0, Math.PI * 2); ctx.stroke(); },
+    desc: 'unused, wrapped, slightly crushed. brought from home.', read: 'people who carry their own teabags have been disappointed by the world’s tea before.',
+    night: 'the label says “everyday”. it is, somehow, the saddest and bravest word in here.',
+  });
+  def('chalk', {
+    label: 'a stub of chalk', mat: 'plastic', passSize: 9,
+    make: RECT(9, 18, { density: 0.0012, friction: 0.8 }),
+    geom: () => ({ outline: ptsRRect(9, 18, 2) }),
+    detail(ctx) { ctx.beginPath(); ctx.moveTo(-4.5, -6); ctx.lineTo(4.5, -6); ctx.stroke(); },
+    desc: 'white chalk, worn at an angle. it dusts everything it touches.', read: 'chalk means writing things where they can be rubbed out. cautious people. or teachers.',
+    night: 'the dust in my seams spells nothing. it tried, though.',
+  });
+  def('stub', {
+    label: 'a cinema stub', mat: 'paper', passSize: 9,
+    make: RECT(24, 14, { density: 0.0007 }),
+    geom: () => ({ outline: subdiv([[-12, -7], [12, -7], [10, 0], [12, 7], [-12, 7], [-10, 0]], 2) }),
+    detail(ctx) { ctx.beginPath(); ctx.moveTo(-7, -2); ctx.lineTo(7, -2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-7, 2); ctx.lineTo(3, 2); ctx.stroke(); },
+    desc: 'seat J14, screen two, months ago.', read: 'kept ticket stubs are receipts for feelings.',
+    night: 'J15 was somebody. the stub does not say who. stubs never do.',
+  });
+  def('shoelace', {
+    label: 'a spare shoelace', mat: 'organic', passSize: 12,
+    make: CIRC(11, { density: 0.0007, frictionAir: 0.03 }),
+    geom: r => { const rr = r || Math.random; const p = []; for (let i = 0; i < 22; i++) { const a = (i / 22) * Math.PI * 2; p.push([Math.cos(a) * (10 + SH.rf(rr, -2, 2)), Math.sin(a) * (9 + SH.rf(rr, -2, 2))]); } return { outline: p }; },
+    detail(ctx) { ctx.beginPath(); ctx.arc(0, 0, 6, 0.8, 2.9); ctx.stroke(); ctx.beginPath(); ctx.arc(1, 1, 3.5, 3.4, 5.6); ctx.stroke(); },
+    desc: 'coiled, still waxy, never used.', read: 'carried by someone whose day cannot afford to stop for a snapped lace. someone who walks a lot, and hard.',
+    night: 'it dreams in knots. all string does.',
+  });
+
   def('grub', {
     label: 'a hungry grub', mat: 'organic', passSize: 6,
     make: CIRC(7, { density: 0.0008, frictionAir: 0.05 }),

@@ -294,6 +294,45 @@
     ctx.restore();
   }
 
+  /* ---------------- the thimble ---------------- */
+  function drawThimble() {
+    const sim = SH.Sim;
+    if (!sim.thimbleC) return;
+    const { x, y } = sim.thimbleC;
+    const e = R.exposure(x, y);
+    const busy = !!sim.reading;
+    const glow = busy ? (0.35 + Math.sin(T * 9) * 0.15) : 0.12 + e * 0.3;
+    // a little nest of thread it sits in
+    ctx.strokeStyle = 'rgba(190,160,110,.16)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(x, y + 8, 20, 3.3, 6.1); ctx.stroke();
+    // the thimble: a small brass dome, dimpled
+    ctx.beginPath();
+    ctx.moveTo(x - 11, y + 10);
+    ctx.quadraticCurveTo(x - 12, y - 12, x, y - 14);
+    ctx.quadraticCurveTo(x + 12, y - 12, x + 11, y + 10);
+    ctx.closePath();
+    ctx.fillStyle = '#3a2f1c';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(232,196,120,' + glow.toFixed(3) + ')';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    for (let i = 0; i < 5; i++) { // dimples
+      ctx.beginPath();
+      ctx.arc(x - 6 + i * 3, y - 5 + (i % 2) * 3.5, 0.8, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // reading in progress: a closing ring of gold
+    if (busy) {
+      const prog = Math.min(1, sim.reading.t / 2.2);
+      ctx.strokeStyle = 'rgba(232,196,120,.8)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, 26, -Math.PI / 2, -Math.PI / 2 + prog * Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
   /* ---------------- items ---------------- */
   function drawItem(it) {
     const sim = SH.Sim;
@@ -605,6 +644,7 @@
     drawPocket();
     drawShaft(0.6, true);
     drawHole();
+    drawThimble();
     if (sim.g) for (const it of sim.g.items) drawItem(it);
     drawHideCorner(); // shadow falls OVER whatever is buried there
     drawHand();
